@@ -45,11 +45,11 @@ module.exports = {
     if (!me.permissions.has('MANAGE_ROLES')) return info(`**❌ البوت ما عنده صلاحية Manage Roles.**`);
 
     try {
-      const role = await message.guild.roles.create({ name, color: '#99aab5', reason: `Voki: رول شخصي لـ ${target.user.tag} بواسطة ${message.author.tag}` });
+      const role = await message.guild.roles.create({ name, color: '#99aab5', reason: `Vanr: رول شخصي لـ ${target.user.tag} بواسطة ${message.author.tag}` });
 
       // نخليه تحت أعلى رول للبوت قدر الإمكان
       await role.setPosition(Math.max(1, me.roles.highest.position - 1)).catch(() => {});
-      await target.roles.add(role, 'Voki: رول شخصي');
+      await target.roles.add(role, 'Vanr: رول شخصي');
 
       PR.setRole(message.guild.id, target.id, role.id);
 
