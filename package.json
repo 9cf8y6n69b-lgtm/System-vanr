@@ -1,7 +1,7 @@
 {
   "name": "voki-bot",
   "version": "1.0.0",
-  "description": "Voki \u2014 \u0628\u0648\u062a \u0625\u062f\u0627\u0631\u0629",
+  "description": "Voki — بوت إدارة",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -10,7 +10,7 @@
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": ">=16.9.0"
+    "node": "20.x"
   },
   "dependencies": {
     "@discordjs/voice": "^0.16.0",
@@ -21,7 +21,6 @@
     "discord-inviter": "^0.9.3",
     "discord.js": "13.17.1",
     "dotenv": "^16.4.5",
-    "editor-canvas": "^0.2.3",
     "jimp": "^0.22.10",
     "moment": "^2.29.4",
     "mongoose": "^7.6.2",
@@ -31,5 +30,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.0"
+  },
+  "optionalDependencies": {
+    "editor-canvas": "^0.2.3"
   }
 }
