@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • نظام التكت
+//  Vanr • نظام التكت
 //  فتح الطلب → روم الريكوست → قبول/رفض → التكت (استلام / تحويل / استدعاء / إغلاق)
 // ═══════════════════════════════════════════════
 const client = require("../index");
@@ -11,7 +11,7 @@ const {
 } = require("discord.js");
 
 const TS = require("../utils/ticketSystem");
-const V = require("../utils/voki");
+const V = require("../utils/vanr");
 const Pro = require("pro.db");
 
 const {

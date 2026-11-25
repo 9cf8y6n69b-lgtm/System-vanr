@@ -96,10 +96,10 @@ async function sendLog(guild, key, data = {}) {
     if (data.user) embed.setThumbnail(data.user.displayAvatarURL({ dynamic: true }));
     const files = [];
     if (data.file && ch.permissionsFor(guild.me).has("ATTACH_FILES")) {
-        files.push({ attachment: data.file, name: "voki-log.png" });
-        embed.setImage("attachment://voki-log.png");
+        files.push({ attachment: data.file, name: "vanr-log.png" });
+        embed.setImage("attachment://vanr-log.png");
     } else if (data.image) embed.setImage(data.image);
-    embed.setFooter(`Voki • ${guild.name}`, guild.iconURL({ dynamic: true }) || undefined).setTimestamp();
+    embed.setFooter(`Vanr • ${guild.name}`, guild.iconURL({ dynamic: true }) || undefined).setTimestamp();
 
     return ch.send({ embeds: [embed], files }).catch(() => {});
 }

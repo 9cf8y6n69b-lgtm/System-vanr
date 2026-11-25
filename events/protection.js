@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • محرك الحماية
+//  Vanr • محرك الحماية
 //  (الأوامر كانت تحفظ الإعدادات فقط وما فيه كود ينفذها — هذا الملف ينفذها)
 //
 //  حماية عادية : تتراجع عن العملية وتعاقب المنفّذ فوراً (إلا المستثنين wanti)
@@ -78,12 +78,12 @@ async function punish(guild, userId, reason) {
 
     try {
         if (!member) {
-            await guild.members.ban(userId, { reason: `Voki: ${reason}` });
+            await guild.members.ban(userId, { reason: `Vanr: ${reason}` });
             return "تم حظره";
         }
 
         if (member.user.bot || hard) {
-            await guild.members.ban(userId, { reason: `Voki: ${reason}` });
+            await guild.members.ban(userId, { reason: `Vanr: ${reason}` });
             return "تم حظره";
         }
 
@@ -94,9 +94,9 @@ async function punish(guild, userId, reason) {
             role.permissions.any(P.DANGEROUS)
         );
 
-        if (removable.size) await member.roles.remove(removable, `Voki: ${reason}`);
+        if (removable.size) await member.roles.remove(removable, `Vanr: ${reason}`);
 
-        await member.timeout(60 * 60 * 1000, `Voki: ${reason}`).catch(() => {});
+        await member.timeout(60 * 60 * 1000, `Vanr: ${reason}`).catch(() => {});
 
         const stillDangerous = member.roles.cache.some(role =>
             role.id !== guild.id && role.permissions.any(P.DANGEROUS) && !removable.has(role.id)
@@ -153,7 +153,7 @@ client.on("channelDelete", guarded("channelDelete", async channel => {
     let restored;
 
     try {
-        const copy = await channel.clone({ reason: "Voki Protection" });
+        const copy = await channel.clone({ reason: "Vanr Protection" });
         await copy.setPosition(channel.rawPosition).catch(() => {});
         restored = `الشات أُعيد إنشاؤه: ${copy}`;
     } catch (error) {
@@ -184,7 +184,7 @@ client.on("roleDelete", guarded("roleDelete", async role => {
             permissions: role.permissions,
             mentionable: role.mentionable,
             position: role.rawPosition,
-            reason: "Voki Protection"
+            reason: "Vanr Protection"
         });
 
         restored = `الرتبة أُعيد إنشاؤها: ${copy} (ما يرجع أعضاءها تلقائياً)`;
@@ -231,7 +231,7 @@ client.on("channelCreate", guarded("channelCreate", async channel => {
     const verdict = judge(guild, entry.executor.id, "anticreate", "channelCreate");
     if (!verdict) return;
 
-    const deleted = await channel.delete("Voki Protection").then(() => "تم حذف الشات").catch(() => "فشل حذف الشات");
+    const deleted = await channel.delete("Vanr Protection").then(() => "تم حذف الشات").catch(() => "فشل حذف الشات");
 
     await violation(guild, entry.executor.id, verdict.reason, "إنشاء شات", [`الشات: \`${channel.name}\``, deleted]);
 }));
@@ -247,7 +247,7 @@ client.on("roleCreate", guarded("roleCreate", async role => {
     const verdict = judge(guild, entry.executor.id, "anticreate", "roleCreate");
     if (!verdict) return;
 
-    const deleted = await role.delete("Voki Protection").then(() => "تم حذف الرتبة").catch(() => "فشل حذف الرتبة");
+    const deleted = await role.delete("Vanr Protection").then(() => "تم حذف الرتبة").catch(() => "فشل حذف الرتبة");
 
     await violation(guild, entry.executor.id, verdict.reason, "إنشاء رتبة", [`الرتبة: \`${role.name}\``, deleted]);
 }));
@@ -285,7 +285,7 @@ client.on("roleUpdate", guarded("roleUpdate", async (oldRole, newRole) => {
         hoist: oldRole.hoist,
         mentionable: oldRole.mentionable,
         permissions: oldRole.permissions
-    }, "Voki Protection").then(() => "تم إرجاع الرتبة كما كانت").catch(error => `فشل الإرجاع: ${String(error.message).slice(0, 60)}`);
+    }, "Vanr Protection").then(() => "تم إرجاع الرتبة كما كانت").catch(error => `فشل الإرجاع: ${String(error.message).slice(0, 60)}`);
 
     await violation(guild, entry.executor.id, verdict.reason, "تعديل رتبة", [`الرتبة: ${newRole}`, reverted]);
 }));
@@ -310,7 +310,7 @@ client.on("guildMemberUpdate", guarded("guildMemberUpdate", async (oldMember, ne
     const verdict = judge(guild, entry.executor.id, "antiperms", "giveRole");
     if (!verdict) return;
 
-    const removed = await newMember.roles.remove(added, "Voki Protection")
+    const removed = await newMember.roles.remove(added, "Vanr Protection")
         .then(() => "تم سحب الرتبة من العضو")
         .catch(() => "فشل سحب الرتبة");
 
@@ -342,7 +342,7 @@ client.on("webhookUpdate", guarded("webhookUpdate", async channel => {
             const mine = hook.id === (entry.target && entry.target.id) ||
                 (hook.owner && hook.owner.id === entry.executor.id);
 
-            if (mine && await hook.delete("Voki Protection").then(() => true).catch(() => false)) deleted++;
+            if (mine && await hook.delete("Vanr Protection").then(() => true).catch(() => false)) deleted++;
         }
     }
 
@@ -362,7 +362,7 @@ client.on("guildBanAdd", guarded("guildBanAdd", async ban => {
     const verdict = judge(guild, entry.executor.id, null, "ban");
     if (!verdict) return;
 
-    const unbanned = await guild.members.unban(ban.user.id, "Voki Protection")
+    const unbanned = await guild.members.unban(ban.user.id, "Vanr Protection")
         .then(() => "تم فك الباند عن الضحية")
         .catch(() => "فشل فك الباند");
 
@@ -400,12 +400,12 @@ client.on("guildUpdate", guarded("guildUpdate", async (oldGuild, newGuild) => {
     const done = [];
 
     if (wantName) {
-        await newGuild.setName(oldGuild.name, "Voki Protection").then(() => done.push("أُرجع الاسم")).catch(() => done.push("فشل إرجاع الاسم"));
+        await newGuild.setName(oldGuild.name, "Vanr Protection").then(() => done.push("أُرجع الاسم")).catch(() => done.push("فشل إرجاع الاسم"));
     }
 
     if (wantIcon) {
         const url = oldGuild.iconURL({ format: "png", size: 1024 });
-        await newGuild.setIcon(url, "Voki Protection").then(() => done.push("أُرجعت الصورة")).catch(() => done.push("فشل إرجاع الصورة"));
+        await newGuild.setIcon(url, "Vanr Protection").then(() => done.push("أُرجعت الصورة")).catch(() => done.push("فشل إرجاع الصورة"));
     }
 
     await violation(newGuild, entry.executor.id, verdict.reason, "تعديل السيرفر", done);
@@ -422,13 +422,13 @@ async function actOnJoiner(member, action, reason) {
 
     await user.send(`تم ${action === "ban" ? "حظرك" : action === "prison" ? "سجنك" : "طردك"} من **${member.guild.name}**\nالسبب: ${reason}`).catch(() => {});
 
-    if (action === "ban") return member.ban({ reason: `Voki: ${reason}` });
+    if (action === "ban") return member.ban({ reason: `Vanr: ${reason}` });
     if (action === "prison") {
         const role = await getOrCreateRole(member.guild, "prison", "#E74C3C");
-        return member.roles.add(role, `Voki: ${reason}`);
+        return member.roles.add(role, `Vanr: ${reason}`);
     }
 
-    return member.kick(`Voki: ${reason}`);
+    return member.kick(`Vanr: ${reason}`);
 }
 
 client.on("guildMemberAdd", guarded("guildMemberAdd", async member => {
@@ -437,7 +437,7 @@ client.on("guildMemberAdd", guarded("guildMemberAdd", async member => {
 
     // 1) قائمة الحجب
     if ((Pro.get(`block_list = ${g}`) || []).includes(member.id)) {
-        await member.ban({ reason: "Voki: في قائمة الحجب" }).catch(() => {});
+        await member.ban({ reason: "Vanr: في قائمة الحجب" }).catch(() => {});
         return P.logSecurity(guild, [`**دخول عضو محجوب**`, `${member.user.tag} • \`${member.id}\``, "الإجراء: تم حظره"], "#e74c3c");
     }
 
@@ -451,7 +451,7 @@ client.on("guildMemberAdd", guarded("guildMemberAdd", async member => {
         // الأونر/المستثنى المتقدم لو أضافه فهو مسموح
         if (adder && P.isAdvancedExempt(guild, adder, client)) return;
 
-        const removed = await member.ban({ reason: "Voki: AntiBots" })
+        const removed = await member.ban({ reason: "Vanr: AntiBots" })
             .then(() => "تم حظر البوت")
             .catch(() => "فشل حظر البوت (ارفع رتبتي)");
 
@@ -545,13 +545,13 @@ function hasForbiddenLink(content, guildId) {
 }
 
 async function silence(member, ms, reason) {
-    const done = await member.timeout(ms, `Voki: ${reason}`).then(() => true).catch(() => false);
+    const done = await member.timeout(ms, `Vanr: ${reason}`).then(() => true).catch(() => false);
     if (done) return true;
 
     const muted = member.guild.roles.cache.find(role => role.name === "Muted");
     if (!muted) return false;
 
-    return member.roles.add(muted, `Voki: ${reason}`).then(() => {
+    return member.roles.add(muted, `Vanr: ${reason}`).then(() => {
         setTimeout(() => member.roles.remove(muted).catch(() => {}), ms);
         return true;
     }).catch(() => false);

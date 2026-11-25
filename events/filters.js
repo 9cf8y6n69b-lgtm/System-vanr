@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • محرك فلاتر الرسائل + تفاعلات اللوحة (flt:*)
+//  Vanr • محرك فلاتر الرسائل + تفاعلات اللوحة (flt:*)
 // ═══════════════════════════════════════════════
 const client = require("../index");
 const { MessageEmbed } = require("discord.js");
@@ -57,7 +57,7 @@ client.on("messageCreate", async message => {
         const botMember = guild.me;
         if (botMember.permissions.has("MANAGE_MESSAGES")) await message.delete().catch(() => {});
 
-        const res = spec === "delete" ? { done: F.label(spec), ok: true } : await F.punish(member, spec, `Voki: ${reason}`);
+        const res = spec === "delete" ? { done: F.label(spec), ok: true } : await F.punish(member, spec, `Vanr: ${reason}`);
 
         message.channel.send({
             content: `${member}`,

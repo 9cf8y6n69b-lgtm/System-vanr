@@ -3,7 +3,7 @@ const client = require("../index");
 const https = require("https");
 const { MessageEmbed } = require("discord.js");
 const Pro = require("pro.db");
-const Voki = require("../utils/voki");
+const Vanr = require("../utils/vanr");
 const CC = require("../utils/cmdConfig");
 const SC = require("../utils/shortcuts");
 
@@ -65,8 +65,8 @@ client.on("messageCreate", async (message) => {
             }
 
             try {
-                // أوامر القائمة في botinfo.json (vokiBanner) ترد إمبداتها بصورة Voki تلقائياً
-                await Voki.runWithBanner(commandName, () =>
+                // أوامر القائمة في botinfo.json (vanrBanner) ترد إمبداتها بصورة Vanr تلقائياً
+                await Vanr.runWithBanner(commandName, () =>
                     command.run(client, message, commandArgs)
                 );
 
@@ -193,7 +193,7 @@ client.on("messageCreate", async (message) => {
                 .setColor(Color)
                 .setDescription(answer)
                 .setFooter(
-                    `${botinfo.botName || "Voki"} 🤖`,
+                    `${botinfo.botName || "Vanr"} 🤖`,
                     client.user.displayAvatarURL()
                 );
 

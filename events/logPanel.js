@@ -1,4 +1,4 @@
-// Voki • تفاعلات لوحة اللوقات (lgp:*)
+// Vanr • تفاعلات لوحة اللوقات (lgp:*)
 const client = require("../index");
 const { MessageEmbed } = require("discord.js");
 const LP = require("../utils/logPanel");

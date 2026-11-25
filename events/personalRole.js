@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • أزرار الرول الشخصي (pr_*) — كل الردود مخفية
+//  Vanr • أزرار الرول الشخصي (pr_*) — كل الردود مخفية
 // ═══════════════════════════════════════════════
 const client = require("../index");
 const PR = require("../utils/personalRoles");
@@ -47,7 +47,7 @@ client.on("interactionCreate", async interaction => {
 
         if (action === "pr_del") {
             await interaction.update({ components: [], embeds: [], content: "جاري الحذف..." });
-            await role.delete(`Voki: صاحب الرول (${interaction.user.tag}) حذفه`).catch(() => {});
+            await role.delete(`Vanr: صاحب الرول (${interaction.user.tag}) حذفه`).catch(() => {});
             PR.clear(guild.id, interaction.user.id);
             return interaction.editReply({ content: "✅ انحذف رولك." });
         }
@@ -102,9 +102,9 @@ client.on("interactionCreate", async interaction => {
             const target = got && (got.mentions.members.first() || guild.members.cache.get((got.content.match(/\d{15,}/) || [])[0]));
             if (!target) return got ? note(interaction, "ما لقيت العضو.") : null;
 
-            if (action === "pr_give") await target.roles.add(role, "Voki: صاحب الرول أعطاه").catch(() => note(interaction, "ما قدرت."));
+            if (action === "pr_give") await target.roles.add(role, "Vanr: صاحب الرول أعطاه").catch(() => note(interaction, "ما قدرت."));
             else if (target.id === interaction.user.id) await note(interaction, "ما تقدر تسحب رولك من نفسك، احذفه بدلها.");
-            else await target.roles.remove(role, "Voki: صاحب الرول سحبه").catch(() => note(interaction, "ما قدرت."));
+            else await target.roles.remove(role, "Vanr: صاحب الرول سحبه").catch(() => note(interaction, "ما قدرت."));
 
             return refresh();
         }

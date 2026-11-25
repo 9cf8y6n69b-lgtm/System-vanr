@@ -333,7 +333,7 @@ client.on("interactionCreate", async (interaction) => {
             .setColor(Color)
             .setTitle(page.title)
             .setDescription(page.desc)
-            .setFooter("Voki", client.user.displayAvatarURL())
+            .setFooter("Vanr", client.user.displayAvatarURL())
             .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] }).catch(() => {});

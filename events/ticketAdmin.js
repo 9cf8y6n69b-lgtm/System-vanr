@@ -1,10 +1,10 @@
 // ═══════════════════════════════════════════════
-//  Voki • أزرار لوحة تحكم التكت (tkc:*)
+//  Vanr • أزرار لوحة تحكم التكت (tkc:*)
 // ═══════════════════════════════════════════════
 const client = require("../index");
 const { MessageEmbed } = require("discord.js");
 const TA = require("../utils/ticketAdmin");
-const V = require("../utils/voki");
+const V = require("../utils/vanr");
 
 const E = (text, color = "#f5b942") => new MessageEmbed().setColor(color).setDescription(String(text));
 
@@ -83,6 +83,13 @@ client.on("interactionCreate", async interaction => {
 
             const ok = await target.send(TA.buildPanel(guild, cfg)).then(() => true).catch(() => false);
             return interaction.reply({ embeds: [E(ok ? `${V.icon(guild, "verified")} انرسلت اللوحة في ${target}` : "ما قدرت أرسل في الروم (تأكد من صلاحيات البوت).", ok ? "#2ecc71" : "#e74c3c")], ephemeral: true });
+        }
+
+        if (action === "panelmode") {
+            const cfg = TA.load(guild.id);
+            cfg.panelMode = cfg.panelMode === "image" ? "embed" : "image";
+            TA.save(guild.id, cfg);
+            return interaction.update(TA.dashboard(guild));
         }
 
         if (action === "secdel") {

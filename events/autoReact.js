@@ -1,4 +1,4 @@
-// Voki • يحط الريأكشنات المحددة على كل رسالة في الروم المضبوط
+// Vanr • يحط الريأكشنات المحددة على كل رسالة في الروم المضبوط
 const client = require("../index");
 const AR = require("../utils/autoReact");
 

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • دخول عضو: رتبة تلقائية + استرجاع رتبه القديمة + رسالة الترحيب (حسب إعدادات welcomeset)
+//  Vanr • دخول عضو: رتبة تلقائية + استرجاع رتبه القديمة + رسالة الترحيب (حسب إعدادات welcomeset)
 // ═══════════════════════════════════════════════
 const client = require("../index");
 const Pro = require("pro.db");
@@ -20,7 +20,7 @@ async function restoreRoles(member) {
         .map(id => member.guild.roles.cache.get(id))
         .filter(role => role && !role.managed && role.editable && !role.permissions.has(DANGEROUS));
 
-    if (roles.length) await member.roles.add(roles, "Voki: استرجاع رتب العضو").catch(() => {});
+    if (roles.length) await member.roles.add(roles, "Vanr: استرجاع رتب العضو").catch(() => {});
     Pro.delete(key);
 }
 
@@ -33,7 +33,7 @@ async function welcome(member, inviterInfo) {
 
     if (cfg.roleId) {
         const role = member.guild.roles.cache.get(cfg.roleId);
-        if (role && role.editable) await member.roles.add(role, "Voki: رتبة الترحيب").catch(() => {});
+        if (role && role.editable) await member.roles.add(role, "Vanr: رتبة الترحيب").catch(() => {});
     }
 
     const channel = member.guild.channels.cache.get(cfg.channelId);
