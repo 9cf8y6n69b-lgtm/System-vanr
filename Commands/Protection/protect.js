@@ -21,7 +21,7 @@ module.exports = {
                 embeds: [
                     new MessageEmbed()
                         .setColor("#2b2d31")
-                        .setTitle("Voki • التحكم بالحماية")
+                        .setTitle("Vanr • التحكم بالحماية")
                         .setDescription(lines.join("\n") + "\n\n`protect <اسم> on` أو `off`\n`protect all on` تفعيل الكل (بدون sechard)")
                 ]
             });
