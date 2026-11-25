@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-//  Voki • logsetup — ملف واحد، أمر واحد:
+//  Vanr • logsetup — ملف واحد، أمر واحد:
 //    ينشئ روم لوق منفصل لكل لوق (دخول صوت، حذف رسالة...) + روم لكل أمر إداري،
 //    ويسجل كل أمر ينفذ في روم خاص فيه بصورة (من نفذ، الهدف، الروم، الوسائط).
 //
@@ -106,7 +106,7 @@ async function logCommand(guild, member, channel, command, args, slash) {
 
         const file = await renderCard({ user: member.user, name: member.displayName, title: `أمر: ${command.name}`, rows }).catch(() => null);
 
-        const embed = new MessageEmbed().setColor("#4da3ff").setTitle(`أمر: ${command.name}`).setFooter(`Voki • ${guild.name}`).setTimestamp();
+        const embed = new MessageEmbed().setColor("#4da3ff").setTitle(`أمر: ${command.name}`).setFooter(`Vanr • ${guild.name}`).setTimestamp();
 
         if (file && room.permissionsFor(guild.me).has("ATTACH_FILES")) {
             embed.setImage("attachment://cmd.png");

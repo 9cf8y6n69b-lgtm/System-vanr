@@ -111,7 +111,7 @@ module.exports = {
                 .setColor(Color)
                 .setTitle("⚙ اختصارات الأوامر")
                 .setDescription(text.length > 4000 ? text.slice(0, 4000) + "..." : text)
-                .setFooter("Voki", client.user.displayAvatarURL())
+                .setFooter("Vanr", client.user.displayAvatarURL())
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});

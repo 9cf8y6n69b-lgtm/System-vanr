@@ -1,5 +1,5 @@
-// emojilist — يعرض كل إيموجيات Voki المرفوعة مع أسمائها (للاستخدام في الرسائل)
-const Voki = require("../../utils/voki");
+// emojilist — يعرض كل إيموجيات Vanr المرفوعة مع أسمائها (للاستخدام في الرسائل)
+const Vanr = require("../../utils/vanr");
 const Pro = require("pro.db");
 const { owners } = require(`${process.cwd()}/config`);
 
@@ -14,7 +14,7 @@ module.exports = {
         const map = Pro.get(`void_emojis_${message.guild.id}`) || {};
         const keys = Object.keys(map);
 
-        if (!keys.length) return message.reply("ما فيه إيموجيات مرفوعة. اكتب `vokisetup emojis` أولاً.");
+        if (!keys.length) return message.reply("ما فيه إيموجيات مرفوعة. اكتب `vanrsetup emojis` أولاً.");
 
         const lines = keys.map(k => `${map[k]} \`${k}\``);
         for (let i = 0; i < lines.length; i += 25) {
