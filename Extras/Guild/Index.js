@@ -81,7 +81,7 @@ client.on(`interactionCreate`, async function (Message) {
         const welcomeEmbed = new MessageEmbed()
           .setColor(Color)
           .setDescription(`**مرحباً ${Message.user} 🌙**\n${selectedOption ? `**نوع التذكرة:** ${selectedOption.label}` : ''}\n\nيرجى شرح مشكلتك وسيتم الرد عليك قريباً`)
-          .setFooter(`Voki`, Message.guild.iconURL())
+          .setFooter(`Vanr`, Message.guild.iconURL())
           .setTimestamp()
 
         if (Image) welcomeEmbed.setThumbnail(Image)
@@ -991,7 +991,7 @@ client.on('ready', async () => {
             const { loadImage } = require("canvas");
             let backgroundImage;
             try {
-                backgroundImage = await loadImage(Url || require("path").join(process.cwd(), "assets", "voki-banner.jpg"));
+                backgroundImage = await loadImage(Url || require("path").join(process.cwd(), "assets", "vanr-banner.jpg"));
             } catch (error) {
                 console.error("Error loading background image:", error);
             }
