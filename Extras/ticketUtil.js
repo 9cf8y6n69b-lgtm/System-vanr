@@ -15,7 +15,7 @@ const DEFAULTS = {
         `› سيصل طلبك للإدارة للمراجعة والقبول\n` +
         `› بعد القبول تُفتح لك تذكرة خاصة بك فقط\n${LINE}`,
     color: "#2b2d31",
-    footer: "Voki • Ticket System",
+    footer: "Vanr • Ticket System",
     placeholder: "📩 اختر نوع التذكرة",
     image: null,      // صورة اللوحة
     thumbnail: null,  // صورة صغيرة باللوحة
