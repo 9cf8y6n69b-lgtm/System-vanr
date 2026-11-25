@@ -1,7 +1,7 @@
 {
-  "name": "voki-bot",
+  "name": "vanr-bot",
   "version": "1.0.0",
-  "description": "Voki — بوت إدارة",
+  "description": "Vanr — بوت إدارة",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

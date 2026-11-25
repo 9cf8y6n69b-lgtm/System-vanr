@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • الملف الرئيسي
+//  Vanr • الملف الرئيسي
 //  شغّله من داخل مجلد البوت:  node index.js
 // ═══════════════════════════════════════════════
 try { require("dotenv").config(); } catch {}
@@ -18,7 +18,7 @@ if (!TOKEN) {
 }
 
 // سيرفر صغير عشان Render (Web Service) يلقى بورت مفتوح ولا يعتبر الخدمة فاشلة
-let webHandler = (req, res) => { res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" }); res.end("Voki bot is running"); };
+let webHandler = (req, res) => { res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" }); res.end("Vanr bot is running"); };
 require("http")
     .createServer((req, res) => webHandler(req, res))
     .listen(process.env.PORT || 3000, () => console.log(`[WEB] listening on ${process.env.PORT || 3000}`));
@@ -41,8 +41,8 @@ try { webHandler = require("./utils/dashboard").handler(client); } catch (error)
 process.on("unhandledRejection", error => console.error("[unhandledRejection]", error));
 process.on("uncaughtException", error => console.error("[uncaughtException]", error));
 
-// صور Voki التلقائية على إمبدات بعض الأوامر (القائمة في botinfo.json)
-require("./utils/voki").installBannerPatch();
+// صور Vanr التلقائية على إمبدات بعض الأوامر (القائمة في botinfo.json)
+require("./utils/vanr").installBannerPatch();
 
 // ───────── تشخيص: يكشف لو Message Content مو مفعّل (وقتها الأوامر ما تشتغل أبداً) ─────────
 let warnedEmpty = false;
@@ -89,7 +89,7 @@ async function main() {
 
     client.once("ready", () => {
         try { require("./utils/backup").start(client); } catch (e) { console.error("[BACKUP]", e.message); }
-        console.log(`✦ Voki online: ${client.user.tag} | ${client.commands.size} أمر | ${client.guilds.cache.size} سيرفر`);
+        console.log(`✦ Vanr online: ${client.user.tag} | ${client.commands.size} أمر | ${client.guilds.cache.size} سيرفر`);
         console.log("  لو الأوامر ما ترد: شغّل البوت بـ DEBUG_MESSAGES=1 node index.js وشوف هل تظهر الرسائل.");
     });
 
