@@ -42,8 +42,8 @@ module.exports = {
         .setColor(`${Color}`)
         .setAuthor(`🙋 ${message.author.username}`, message.author.displayAvatarURL({ dynamic: true }))
         .addField('السؤال', question, false)
-        .addField(`🤖 ${botinfo.botName || 'Voki'}`, answer, false)
-        .setFooter(`${botinfo.embedFooter || 'Voki'}`, client.user.displayAvatarURL())
+        .addField(`🤖 ${botinfo.botName || 'Vanr'}`, answer, false)
+        .setFooter(`${botinfo.embedFooter || 'Vanr'}`, client.user.displayAvatarURL())
         .setTimestamp();
 
       loadMsg.edit({ embeds: [embed] });

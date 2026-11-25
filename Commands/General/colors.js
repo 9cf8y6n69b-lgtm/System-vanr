@@ -31,7 +31,7 @@ module.exports = {
 
     let backgroundImage;
     try {
-      backgroundImage = await loadImage(Url || require("path").join(process.cwd(), "assets", "voki-banner.jpg"));
+      backgroundImage = await loadImage(Url || require("path").join(process.cwd(), "assets", "vanr-banner.jpg"));
     } catch (error) {
       console.error("Error loading background image:", error);
     }
