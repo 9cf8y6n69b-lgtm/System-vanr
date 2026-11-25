@@ -1,4 +1,5 @@
-var { drawCircle } = require("editor-canvas"); // npm i editor-canvas
+let drawCircle = null;
+try { ({ drawCircle } = require("editor-canvas")); } catch { /* اختياري: ما تثبت على Node الجديد */ }
 module.exports = {
     name: "circle",
     run: async (client, message, args) => {
@@ -7,6 +8,7 @@ module.exports = {
         
         
           if (!message.guild || message.author.bot) return;
+          if (!drawCircle) return message.reply("❌ أمر circle غير متوفر حالياً.");
           var args = message.content.split(/ +/);
         
           
