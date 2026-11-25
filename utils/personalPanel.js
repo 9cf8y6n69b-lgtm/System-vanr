@@ -1,4 +1,4 @@
-// Voki • لوحة الرول الشخصي (Embed مخفي + أزرار)
+// Vanr • لوحة الرول الشخصي (Embed مخفي + أزرار)
 const { MessageEmbed, MessageActionRow, MessageButton } = require("discord.js");
 const PR = require("./personalRoles");
 

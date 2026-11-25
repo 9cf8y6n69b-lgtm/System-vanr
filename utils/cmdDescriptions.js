@@ -203,7 +203,7 @@ module.exports = {
  "log-delete": "حذف روم لوق",
  "log-creat": "إنشاء روم لوق",
  "emojilist": "عرض إيموجيات البوت",
- "vokisetup": "تسطيب السيرفر: رومات، رتب، لوقات، ستكرات",
+ "vanrsetup": "تسطيب السيرفر: رومات، رتب، لوقات، ستكرات",
  "backup": "نسخة احتياطية لكل الإعدادات: backup / backup list / backup restore",
  "protect": "لوحة الحماية وإعداداتها",
  "unanti": "إيقاف حماية معينة",

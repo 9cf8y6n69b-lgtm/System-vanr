@@ -1,4 +1,4 @@
-// Voki • ريأكشن تلقائي: روم -> قائمة إيموجيات (محفوظة بـ pro.db)
+// Vanr • ريأكشن تلقائي: روم -> قائمة إيموجيات (محفوظة بـ pro.db)
 const Pro = require("pro.db");
 
 const key = g => `autoreact_${g}`;

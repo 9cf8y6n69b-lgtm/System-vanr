@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • واجهة الهيلب: تصفح كل الأوامر + بحث + تعديل (من نفس الهيلب)
+//  Vanr • واجهة الهيلب: تصفح كل الأوامر + بحث + تعديل (من نفس الهيلب)
 // ═══════════════════════════════════════════════
 const { MessageEmbed, MessageActionRow, MessageButton, MessageSelectMenu } = require("discord.js");
 const CC = require("./cmdConfig");

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • النسخ الاحتياطي
+//  Vanr • النسخ الاحتياطي
 //  - أي تعديل → نسخة (gzip JSON) تنرسل لروم النسخ بعد دقيقتين من آخر تعديل
 //  - عند التشغيل: يكمّل أي إعداد ناقص من آخر نسخة (بدون ما يمسح أو يغيّر الجديد)
 //  - الاسترجاع = دمج: القديم يرجع، والجديد اللي مو بالنسخة ما ينحذف
@@ -35,7 +35,7 @@ function entries() {
 
 function snapshot() {
     const list = entries();
-    const json = JSON.stringify({ app: "voki", v: 1, at: Date.now(), entries: list });
+    const json = JSON.stringify({ app: "vanr", v: 1, at: Date.now(), entries: list });
     return { buffer: zlib.gzipSync(Buffer.from(json), { level: 9 }), count: list.length, hash: crypto.createHash("sha1").update(JSON.stringify(list)).digest("hex") };
 }
 
@@ -43,8 +43,13 @@ const stamp = () => new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
 
 async function channel() {
     if (!client) throw new Error("البوت مو جاهز");
-    const ch = await client.channels.fetch(CHANNEL_ID);
-    if (!ch || !ch.send) throw new Error("روم النسخ غير موجود أو البوت ما يشوفه");
+    let ch = await client.channels.fetch(CHANNEL_ID).catch(() => null);
+    if (!ch) {
+        // لو الرقم حق شخص (مو روم) نرسل له خاص
+        const user = await client.users.fetch(CHANNEL_ID).catch(() => null);
+        ch = user ? await user.createDM().catch(() => null) : null;
+    }
+    if (!ch || !ch.send) throw new Error("ما لقيت الروم/الشخص، أو البوت ما يقدر يرسل له (فعّل الخاص لو شخص)");
     return ch;
 }
 
@@ -52,7 +57,7 @@ async function send(reason = "تعديل") {
     const snap = snapshot();
     if (snap.buffer.length > MAX_BYTES) throw new Error("حجم النسخة أكبر من حد ديسكورد");
     const ch = await channel();
-    const name = `voki-backup-${stamp()}.json.gz`;
+    const name = `vanr-backup-${stamp()}.json.gz`;
     const msg = await ch.send({
         content: `📦 **نسخة احتياطية** • ${reason}\n\`${snap.count}\` إعداد • \`${(snap.buffer.length / 1024).toFixed(1)}KB\` • <t:${Math.floor(Date.now() / 1000)}:R>`,
         files: [{ attachment: snap.buffer, name }]
@@ -86,7 +91,7 @@ async function list(limit = 25) {
     const out = [];
     for (const m of msgs.values()) {
         for (const a of m.attachments.values()) {
-            if (/^voki-backup-.*\.json(\.gz)?$/i.test(a.name || "")) out.push({ id: m.id, name: a.name, url: a.url, size: a.size, at: m.createdTimestamp });
+            if (/^vanr-backup-.*\.json(\.gz)?$/i.test(a.name || "")) out.push({ id: m.id, name: a.name, url: a.url, size: a.size, at: m.createdTimestamp });
         }
     }
     return out.sort((a, b) => b.at - a.at).slice(0, limit);
@@ -102,7 +107,7 @@ function parse(buffer) {
     let raw = buffer;
     if (raw[0] === 0x1f && raw[1] === 0x8b) raw = zlib.gunzipSync(raw);
     const data = JSON.parse(raw.toString("utf8"));
-    if (!data || data.app !== "voki" || !Array.isArray(data.entries)) throw new Error("الملف مو نسخة Voki صحيحة");
+    if (!data || data.app !== "vanr" || !Array.isArray(data.entries)) throw new Error("الملف مو نسخة Vanr صحيحة");
     return data;
 }
 

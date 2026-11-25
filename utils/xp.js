@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • نظام الخبرة (XP شات + XP فويس + لفل) وكرت id
+//  Vanr • نظام الخبرة (XP شات + XP فويس + لفل) وكرت id
 // ═══════════════════════════════════════════════
 const fs = require("fs");
 const path = require("path");
@@ -7,7 +7,7 @@ const Pro = require("pro.db");
 const { createCanvas, loadImage, GlobalFonts } = require("canvas");
 
 const ROOT = path.join(__dirname, "..");
-const BANNER = path.join(ROOT, "assets", "voki-banner.jpg");
+const BANNER = path.join(ROOT, "assets", "vanr-banner.jpg");
 
 try {
     GlobalFonts.registerFromPath(path.join(ROOT, "Cairo-Regular.ttf"), "Cairo");
@@ -118,7 +118,7 @@ async function applyRoleRewards(member, level) {
 
         if (!role || member.roles.cache.has(role.id) || !role.editable) continue;
 
-        await member.roles.add(role, "Voki XP level reward").then(() => given.push(role)).catch(() => {});
+        await member.roles.add(role, "Vanr XP level reward").then(() => given.push(role)).catch(() => {});
     }
 
     return given;
@@ -164,7 +164,7 @@ async function renderCard(user, guildId) {
     const canvas = createCanvas(W, H);
     const ctx = canvas.getContext("2d");
 
-    // الخلفية: صورة Voki مظللة
+    // الخلفية: صورة Vanr مظللة
     ctx.fillStyle = "#0e0f11";
     ctx.fillRect(0, 0, W, H);
 

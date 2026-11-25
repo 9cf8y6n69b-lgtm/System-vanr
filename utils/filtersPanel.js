@@ -1,4 +1,4 @@
-// Voki • لوحة الفلاتر (إيمبد + أزرار)
+// Vanr • لوحة الفلاتر (إيمبد + أزرار)
 const { MessageEmbed, MessageActionRow, MessageButton, MessageSelectMenu } = require("discord.js");
 const F = require("./filters");
 

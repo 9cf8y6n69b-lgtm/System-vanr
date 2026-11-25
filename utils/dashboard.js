@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • داشبورد ويب (نفس سيرفر Render)
+//  Vanr • داشبورد ويب (نفس سيرفر Render)
 //  يفتح على رابط الخدمة نفسه. لازم تضيف في Render > Environment:
 //      DASH_PASSWORD = كلمة سر قوية
 //  بدونها الداشبورد مقفل.
@@ -22,7 +22,7 @@ const fs = require("fs");
 const path = require("path");
 const CLIENT_JS = fs.readFileSync(path.join(__dirname, "dashboardClient.js"), "utf8").replace(/<\/script>/gi, "<\\/script>");
 const PASSWORD = process.env.DASH_PASSWORD || "";
-const SECRET = crypto.createHash("sha256").update(`${PASSWORD}|${process.env.TOKEN || ""}|voki`).digest();
+const SECRET = crypto.createHash("sha256").update(`${PASSWORD}|${process.env.TOKEN || ""}|vanr`).digest();
 const TTL = 12 * 3600 * 1000;
 const attempts = new Map();
 
@@ -31,12 +31,12 @@ const safeEq = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(Str
 
 function makeSession() { const exp = Date.now() + TTL; return `${exp}.${sign(String(exp))}`; }
 function validSession(cookie) {
-    const m = /(?:^|;\s*)voki_sess=([^;]+)/.exec(cookie || "");
+    const m = /(?:^|;\s*)vanr_sess=([^;]+)/.exec(cookie || "");
     if (!m) return false;
     const [exp, sig] = m[1].split(".");
     return Number(exp) > Date.now() && safeEq(sig || "", sign(String(exp)));
 }
-const csrfOf = cookie => sign(`csrf|${(/(?:^|;\s*)voki_sess=([^;]+)/.exec(cookie || "") || [])[1] || ""}`);
+const csrfOf = cookie => sign(`csrf|${(/(?:^|;\s*)vanr_sess=([^;]+)/.exec(cookie || "") || [])[1] || ""}`);
 
 const json = (res, code, data) => { res.writeHead(code, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }); res.end(JSON.stringify(data)); };
 
@@ -235,15 +235,16 @@ async function api(client, req, res, url) {
                 name: String(c.name).slice(0, 80), description: String(c.description || "").slice(0, 100),
                 emoji: TA.cleanEmoji(c.emoji), roleId: c.roleId && guild.roles.cache.has(c.roleId) ? c.roleId : null
             }));
+            cur.panelMode = b.panelMode === "image" ? "image" : "embed";
             for (const k of ["panelText", "requestText", "ticketText", "acceptedText", "pointText"]) cur[k] = String(b[k] || "").slice(0, 2000);
             TA.save(guild.id, cur);
             return json(res, 200, { ok: true });
         }
         case "welcomedefault": {
-            const V = require("./voki"), f = path.join(V.DESIGNS_DIR, "welcome.png");
+            const V = require("./vanr"), f = path.join(V.DESIGNS_DIR, "welcome.png");
             if (!fs.existsSync(f)) return json(res, 404, { error: "no design" });
             const key = `welcome_system_${guild.id}`, cur = Pro.get(key) || {};
-            cur.template = fs.readFileSync(f).toString("base64"); cur.fileName = "voki-welcome.png"; cur.circle = { ...V.WELCOME_CIRCLE };
+            cur.template = fs.readFileSync(f).toString("base64"); cur.fileName = "vanr-welcome.png"; cur.circle = { ...V.WELCOME_CIRCLE };
             Pro.set(key, cur);
             if (WC) WC.set(guild.id, { imgAvatar: true });
             return json(res, 200, { ok: true });
@@ -305,7 +306,7 @@ async function api(client, req, res, url) {
         }
         case "member": {
             if (!idOk(body.userId)) return json(res, 400, { error: "ID غلط" });
-            const reason = `Voki Dashboard: ${String(body.reason || "").slice(0, 150) || "بدون سبب"}`;
+            const reason = `Vanr Dashboard: ${String(body.reason || "").slice(0, 150) || "بدون سبب"}`;
             const mem = await guild.members.fetch(body.userId).catch(() => null);
             try {
                 switch (body.action) {
@@ -354,7 +355,7 @@ async function api(client, req, res, url) {
             if ("room" in body) { if (!chOk(body.room)) return json(res, 400, { error: "bad" }); PR.setRoom(guild.id, body.room || null); }
             if (body.deleteUser && idOk(body.deleteUser)) {
                 const rid = PR.getRoleId(guild.id, body.deleteUser), role = rid && guild.roles.cache.get(rid);
-                if (role) await role.delete("Voki dashboard").catch(() => {});
+                if (role) await role.delete("Vanr dashboard").catch(() => {});
                 PR.clear(guild.id, body.deleteUser);
             }
             return json(res, 200, { ok: true });
@@ -383,7 +384,7 @@ function handler(client) {
 
             if (!PASSWORD) {
                 res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-                return res.end("<meta charset=utf-8><body style='font-family:sans-serif;background:#111;color:#eee;padding:40px'>Voki bot is running.<br>للداشبورد: أضف DASH_PASSWORD في Environment على Render.");
+                return res.end("<meta charset=utf-8><body style='font-family:sans-serif;background:#111;color:#eee;padding:40px'>Vanr bot is running.<br>للداشبورد: أضف DASH_PASSWORD في Environment على Render.");
             }
 
             if (url.pathname === "/login" && req.method === "POST") {
@@ -395,7 +396,7 @@ function handler(client) {
                 const pass = new URLSearchParams(await readBody(req)).get("password") || "";
                 if (safeEq(pass, PASSWORD)) {
                     attempts.delete(ip);
-                    res.writeHead(302, { "Set-Cookie": `voki_sess=${makeSession()}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${TTL / 1000}`, Location: "/" });
+                    res.writeHead(302, { "Set-Cookie": `vanr_sess=${makeSession()}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${TTL / 1000}`, Location: "/" });
                     return res.end();
                 }
                 a.n++; attempts.set(ip, a);
@@ -404,7 +405,7 @@ function handler(client) {
             }
 
             if (url.pathname === "/logout") {
-                res.writeHead(302, { "Set-Cookie": "voki_sess=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0", Location: "/" });
+                res.writeHead(302, { "Set-Cookie": "vanr_sess=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0", Location: "/" });
                 return res.end();
             }
 
@@ -426,9 +427,9 @@ function handler(client) {
 
 const CSS = `:root{--bg:#0e0f11;--card:#17181b;--line:#2a2c31;--tx:#eee;--mu:#9aa0a8;--ac:#f5b942}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,"Segoe UI",Tahoma,sans-serif}a{color:var(--ac)}input,select,textarea,button{font:inherit;color:var(--tx);background:#1f2125;border:1px solid var(--line);border-radius:8px;padding:8px 10px}button{cursor:pointer;background:var(--ac);color:#111;border:0;font-weight:700}button.s{background:#2a2c31;color:var(--tx)}button.d{background:#e74c3c;color:#fff}`;
 
-const LOGIN = err => `<!doctype html><html dir=rtl lang=ar><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Voki Dashboard</title><style>${CSS}body{display:grid;place-items:center;min-height:100vh}form{background:var(--card);padding:28px;border-radius:16px;border:1px solid var(--line);display:grid;gap:12px;width:min(92vw,340px)}h1{margin:0;color:var(--ac)}</style><form method=post action=/login><h1>Voki</h1><div style="color:var(--mu)">لوحة التحكم</div><input type=password name=password placeholder="كلمة السر" autofocus required>${err ? "<div style='color:#e74c3c'>كلمة السر غلط</div>" : ""}<button>دخول</button></form></html>`;
+const LOGIN = err => `<!doctype html><html dir=rtl lang=ar><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Vanr Dashboard</title><style>${CSS}body{display:grid;place-items:center;min-height:100vh}form{background:var(--card);padding:28px;border-radius:16px;border:1px solid var(--line);display:grid;gap:12px;width:min(92vw,340px)}h1{margin:0;color:var(--ac)}</style><form method=post action=/login><h1>Vanr</h1><div style="color:var(--mu)">لوحة التحكم</div><input type=password name=password placeholder="كلمة السر" autofocus required>${err ? "<div style='color:#e74c3c'>كلمة السر غلط</div>" : ""}<button>دخول</button></form></html>`;
 
-const PAGE = `<!doctype html><html dir=rtl lang=ar><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Voki Dashboard</title><style>${CSS}
+const PAGE = `<!doctype html><html dir=rtl lang=ar><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Vanr Dashboard</title><style>${CSS}
 header{display:flex;gap:12px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}header h1{margin:0;color:var(--ac);font-size:20px;cursor:pointer}header .sp{flex:1}
 #burger{font-size:22px;line-height:1;padding:6px 12px;background:#1f2125;color:var(--tx);border:1px solid var(--line)}
 #drawer{position:fixed;top:0;right:0;height:100%;width:300px;max-width:85vw;background:#121316;border-left:1px solid var(--line);transform:translateX(105%);transition:.2s;z-index:20;overflow:auto;padding:16px}
@@ -442,7 +443,7 @@ main{padding:0 18px 40px;max-width:980px;margin:auto}.card{background:var(--card
 .hero{display:flex;gap:14px;align-items:center}.hero img{width:64px;height:64px;border-radius:16px}
 .muted{color:var(--mu);font-size:13px}.toast{position:fixed;bottom:18px;left:18px;background:#2ecc71;color:#111;padding:10px 16px;border-radius:10px;display:none;font-weight:700;z-index:30}
 textarea{width:100%;min-height:90px}input[type=text],input:not([type]),select{min-width:0}.chip{display:inline-block;background:#26282d;border-radius:999px;padding:2px 10px;margin:2px;font-size:12px}</style>
-<header><h1 onclick="TAB='overview';render()">Voki</h1><select id=g></select><span class=sp></span><a href=/logout>خروج</a><button id=burger onclick=toggleMenu() aria-label=menu>☰</button></header>
+<header><h1 onclick="TAB='overview';render()">Vanr</h1><select id=g></select><span class=sp></span><a href=/logout>خروج</a><button id=burger onclick=toggleMenu() aria-label=menu>☰</button></header>
 <div id=shade onclick=toggleMenu()></div><aside id=drawer><h3>القائمة</h3><div id=tabs></div></aside>
 <div id=crumb></div><main id=main></main><div class=toast id=toast>تم الحفظ</div>
 <script>${CLIENT_JS}</script></html>`;

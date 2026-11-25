@@ -1,12 +1,12 @@
 // ═══════════════════════════════════════════════
-//  Voki • كرت لوق الصوت: اسم الروم + العضو + كل الأعضاء داخل الروم
+//  Vanr • كرت لوق الصوت: اسم الروم + العضو + كل الأعضاء داخل الروم
 // ═══════════════════════════════════════════════
 const fs = require("fs");
 const path = require("path");
 const { createCanvas, loadImage, GlobalFonts } = require("canvas");
 
 const ROOT = path.join(__dirname, "..");
-const BANNER = path.join(ROOT, "assets", "voki-banner.jpg");
+const BANNER = path.join(ROOT, "assets", "vanr-banner.jpg");
 try { GlobalFonts.registerFromPath(path.join(ROOT, "Cairo-Regular.ttf"), "Cairo"); } catch {}
 const FONT = "Cairo, sans-serif";
 

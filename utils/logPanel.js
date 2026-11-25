@@ -1,4 +1,4 @@
-// Voki • لوحة اللوقات (!log): كل لوق له روم، تختاره من الإيمبد
+// Vanr • لوحة اللوقات (!log): كل لوق له روم، تختاره من الإيمبد
 const Pro = require("pro.db");
 const { MessageEmbed, MessageActionRow, MessageButton, MessageSelectMenu } = require("discord.js");
 const LOG_TYPES = require(`${process.cwd()}/Extras/logTypes`);

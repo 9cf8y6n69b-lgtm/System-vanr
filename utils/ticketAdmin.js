@@ -1,12 +1,12 @@
 // ═══════════════════════════════════════════════
-//  Voki • لوحة تحكم التكت (كلها إمبد + أزرار)
+//  Vanr • لوحة تحكم التكت (كلها إمبد + أزرار)
 // ═══════════════════════════════════════════════
 const fs = require("fs");
 const path = require("path");
 const https = require("https");
 const Pro = require("pro.db");
 const { MessageActionRow, MessageButton, MessageSelectMenu, MessageEmbed } = require("discord.js");
-const V = require("./voki");
+const V = require("./vanr");
 const TS = require("./ticketSystem");
 
 const IMAGES_DIR = path.join(process.cwd(), "ticket_images");
@@ -16,7 +16,7 @@ const MAX_IMAGE = 3 * 1024 * 1024;
 const DEFAULTS = guildId => ({
     guildId, panelChannelId: null, requestChannelId: null, ticketCategoryId: null,
     reviewerRoleIds: [], categories: [], panelImagePath: null, requestImagePath: null,
-    panelText: "", requestText: "", ticketText: "", acceptedText: "", pointText: ""
+    panelMode: "embed", panelText: "", requestText: "", ticketText: "", acceptedText: "", pointText: ""
 });
 
 const load = guildId => ({ ...DEFAULTS(guildId), ...(TS.getConfig(guildId) || {}) });
@@ -100,6 +100,14 @@ function makePanelRows(guild, categories) {
 function buildPanel(guild, config) {
     const image = V.pickImage(config.panelImagePath, "ticket_panel");
 
+    // نمط "صورة + أقسام" بدون إمبد
+    if (config.panelMode === "image") {
+        const p = { components: makePanelRows(guild, config.categories || []) };
+        if (config.panelText) p.content = config.panelText;
+        if (image.file) p.files = [image.file];
+        return p;
+    }
+
     const embed = new MessageEmbed()
         .setColor(V.COLOR)
         .setAuthor({ name: `${guild.name} • مركز الدعم`, iconURL: guild.iconURL({ dynamic: true }) || undefined })
@@ -144,7 +152,7 @@ function dashboard(guild) {
             { name: `${i("panel")} الرومات`, value: [mark(c.panelChannelId, `اللوحة: ${ch(c.panelChannelId)}`), mark(c.requestChannelId, `الريكوست: ${ch(c.requestChannelId)}`), mark(c.ticketCategoryId, `كاتيغوري التكت: ${ch(c.ticketCategoryId)}`)].join("\n"), inline: false },
             { name: `${i("support")} رتب الدعم`, value: mark(c.reviewerRoleIds.length, c.reviewerRoleIds.map(r => `<@&${r}>`).join(" ") || "غير محددة"), inline: false },
             { name: `${i("tkgold")} الأقسام (${c.categories.length})`, value: (c.categories.map(x => `${x.emoji || "•"} **${x.name}**`).join(" • ") || "ما فيه أقسام").slice(0, 1000), inline: false },
-            { name: `${i("image")} الصور`, value: `اللوحة: ${c.panelImagePath ? "مخصصة" : "Voki"} • الريكوست: ${c.requestImagePath ? "مخصصة" : "Voki"}`, inline: true },
+            { name: `${i("image")} الصور`, value: `اللوحة: ${c.panelImagePath ? "مخصصة" : "Vanr"} • الريكوست: ${c.requestImagePath ? "مخصصة" : "Vanr"}`, inline: true },
             { name: `${i("note")} النصوص`, value: `اللوحة: ${txt(c.panelText)} • الريكوست: ${txt(c.requestText)} • التكت: ${txt(c.ticketText)}\nDM القبول: ${txt(c.acceptedText)} • DM النقطة: ${txt(c.pointText)}`, inline: true }
         )
         .setFooter({ text: `${V.BRAND} • Ticket System` });
@@ -170,6 +178,9 @@ function dashboard(guild) {
             btn(guild, "tkc:preview", "معاينة اللوحة", "SECONDARY", "eye"),
             btn(guild, "tkc:send", "إرسال اللوحة", "SUCCESS", "sparkle"),
             btn(guild, "tkc:close", "إغلاق", "DANGER", "close")
+        ),
+        new MessageActionRow().addComponents(
+            btn(guild, "tkc:panelmode", c.panelMode === "image" ? "نمط اللوحة: صورة + أقسام" : "نمط اللوحة: إمبد", "PRIMARY", "image")
         )
     ];
 

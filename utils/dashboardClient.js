@@ -133,14 +133,14 @@ VIEWS.welcome = () => {
         <button onclick=saveWelcome()>حفظ الترحيب</button>
         <div class=card style="margin-top:12px"><b>صورة الترحيب</b>
         <div class=muted>ارفع تصميم، واضغط على الصورة لتحديد مكان صورة العضو، وغير الحجم بالسلايدر.</div>
-        <div class=row><button onclick=wDefault()>🎨 تطبيق تصميم Voki الجاهز</button></div>
+        <div class=row><button onclick=wDefault()>🎨 تطبيق تصميم Vanr الجاهز</button></div>
         <div class=row><input type=file id=wf accept="image/png,image/jpeg,image/webp" onchange=wPick(this)>${box("wc_none", G.welcomeTpl.has && G.welcomeTpl.circle.none, "بدون صورة العضو (بدون دائرة)")}${G.welcomeTpl.has ? `<button class=d onclick=wRemoveImg()>حذف الصورة</button>` : ""}</div>
         <div class=row><label>حجم الدائرة</label><input type=range id=wc_r min=20 max=600 value=${(G.welcomeTpl.circle && G.welcomeTpl.circle.radius) || 120} oninput=wDraw() style="flex:1"></div>
         <div style="overflow:auto"><canvas id=wcv style="max-width:100%;border:1px solid var(--line);border-radius:10px;cursor:crosshair"></canvas></div>
         <div class=row><button onclick=saveWelcomeImg()>حفظ الصورة والدائرة</button><span class=muted id=wimsg></span></div></div>`;
     wLoad();
 };
-async function wDefault() { if (!confirm("يستبدل صورة الترحيب بتصميم Voki الجاهز؟")) return; await post("welcomedefault", {}); await reload(); VIEWS.welcome(); toast("انطبق التصميم"); }
+async function wDefault() { if (!confirm("يستبدل صورة الترحيب بتصميم Vanr الجاهز؟")) return; await post("welcomedefault", {}); await reload(); VIEWS.welcome(); toast("انطبق التصميم"); }
 async function saveWelcome() {
     const b = { enabled: chk("w_en"), channelId: val("w_ch") || null, mode: val("w_mode"), roleId: val("w_role") || null, title: val("w_title"), color: val("w_color"), footer: val("w_foot"), deleteAfter: +val("w_del"), text: val("w_text") };
     ["avatar", "name", "mention", "inviter", "count", "imgAvatar", "imgName"].forEach(k => (b[k] = chk("w_" + k)));
@@ -194,6 +194,7 @@ VIEWS.tickets = () => {
         <div class=row><label>كاتيغوري التكت</label><select id=t_cat>${G.categories.map(c => `<option value="${c.id}" ${c.id === t.ticketCategoryId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}<option value="" ${t.ticketCategoryId ? "" : "selected"}>— بدون —</option></select></div>
         <div class=row><label>رتب الدعم</label></div>${roleMulti("t_roles", t.reviewerRoleIds)}</div>
         <div class=card><b>الأقسام</b><div id=t_cats>${cats}</div><button class=s onclick=addTicketCat()>+ إضافة قسم</button></div>
+        <div class=card><b>شكل اللوحة</b><div class=row><label>النمط</label><select id=t_mode><option value=embed ${t.panelMode !== "image" ? "selected" : ""}>إمبد + صورة + أقسام</option><option value=image ${t.panelMode === "image" ? "selected" : ""}>صورة + أقسام فقط (بدون إمبد)</option></select></div></div>
         <div class=card><b>النصوص</b>${[["panelText", "نص اللوحة"], ["requestText", "نص الريكوست"], ["ticketText", "نص داخل التكت"], ["acceptedText", "DM القبول"], ["pointText", "DM النقطة"]].map(([k, l]) => `<div class=muted>${l}</div><textarea id=tx_${k}>${esc(t[k])}</textarea>`).join("")}<div class=muted>المتغيرات: {user} {number} {category} {staff} {ticket} {admin}</div></div>
         <div class=row><button onclick=saveTickets()>حفظ</button><button class=s onclick=sendPanel()>حفظ + إرسال اللوحة</button></div><div class=muted>صور اللوحة والريكوست من أمر <code>تكت</code> في ديسكورد.</div>`;
 };
@@ -203,7 +204,7 @@ function addTicketCat() {
     $("#t_cats").appendChild(d);
 }
 function ticketBody() {
-    const b = { panelChannelId: val("t_panel") || null, requestChannelId: val("t_req") || null, ticketCategoryId: val("t_cat") || null, reviewerRoleIds: picked("t_roles"), categories: [...document.querySelectorAll("#t_cats .row")].map(r => ({ id: r.querySelector(".c_id").value, name: r.querySelector(".c_name").value, description: r.querySelector(".c_desc").value, emoji: r.querySelector(".c_emoji").value, roleId: r.querySelector(".c_role").value || null })) };
+    const b = { panelChannelId: val("t_panel") || null, requestChannelId: val("t_req") || null, ticketCategoryId: val("t_cat") || null, panelMode: val("t_mode"), reviewerRoleIds: picked("t_roles"), categories: [...document.querySelectorAll("#t_cats .row")].map(r => ({ id: r.querySelector(".c_id").value, name: r.querySelector(".c_name").value, description: r.querySelector(".c_desc").value, emoji: r.querySelector(".c_emoji").value, roleId: r.querySelector(".c_role").value || null })) };
     ["panelText", "requestText", "ticketText", "acceptedText", "pointText"].forEach(k => (b[k] = val("tx_" + k)));
     return b;
 }

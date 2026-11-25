@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  Voki • مفاتيح الحماية وأدواتها (تُستخدم من الأوامر ومن events/protection.js)
+//  Vanr • مفاتيح الحماية وأدواتها (تُستخدم من الأوامر ومن events/protection.js)
 // ═══════════════════════════════════════════════
 const Pro = require("pro.db");
 const { MessageEmbed } = require("discord.js");
