@@ -58,8 +58,8 @@ async function uploadEmojis(guild) {
     const report = { created: [], existed: [], failed: [] };
 
     await guild.emojis.fetch().catch(() => {});
-    // حذف إيموجيات الاسم القديم (void_* و vanr_*) لتفادي حد الإيموجيات
-    for (const old of [...guild.emojis.cache.filter(e => /^(void|vanr)_/.test(e.name)).values()]) {
+    // حذف إيموجيات الأسماء القديمة (void_* و voki_*) لتفادي حد الإيموجيات
+    for (const old of [...guild.emojis.cache.filter(e => /^(void|voki)_/.test(e.name)).values()]) {
         await old.delete("Rebrand to Vanr").catch(() => {});
     }
 
@@ -92,6 +92,27 @@ async function uploadEmojis(guild) {
     return report;
 }
 
+// يتأكد إن إيموجيات المفاتيح موجودة فعلاً بالسيرفر، وإلا يرفعها (مرة وحدة لكل سيرفر في نفس الوقت)
+const ensuring = new Map();
+async function ensureEmojis(guild, keys) {
+    if (ensuring.has(guild.id)) return ensuring.get(guild.id);
+    const job = (async () => {
+        try {
+            await guild.emojis.fetch().catch(() => {});
+            const map = emojiMap(guild.id);
+            const want = keys || EMOJI_KEYS;
+            const idOf = v => (/(\d{15,25})>?$/.exec(String(v || "")) || [])[1];
+            const missing = want.filter(k => !map[k] || !guild.emojis.cache.has(idOf(map[k])));
+            if (!missing.length) return false;
+            await uploadEmojis(guild);
+            return true;
+        } catch (e) { console.error("[EMOJI] ensure:", e.message); return false; }
+        finally { ensuring.delete(guild.id); }
+    })();
+    ensuring.set(guild.id, job);
+    return job;
+}
+
 // ───────────── البانر ─────────────
 function bannerFile() {
     return fs.existsSync(BANNER_PATH)
@@ -112,6 +133,9 @@ function pickImage(customPath, kind) {
     if (kind) {
         const dp = path.join(DESIGNS_DIR, `${kind}.png`);
         if (fs.existsSync(dp)) return { file: { attachment: dp, name: `vanr-${kind}.png` }, url: `attachment://vanr-${kind}.png` };
+        let data = null;
+        try { data = require("./designData")[kind]; } catch {}
+        if (data) return { file: { attachment: Buffer.from(data, "base64"), name: `vanr-${kind}.png` }, url: `attachment://vanr-${kind}.png` };
     }
     const file = bannerFile();
     return file ? { file, url: `attachment://${BANNER_NAME}` } : { file: null, url: null };
@@ -192,6 +216,7 @@ module.exports = {
     uploadEmojis,
     bannerFile,
     pickImage,
+    ensureEmojis,
     DESIGNS_DIR,
     WELCOME_CIRCLE,
     installBannerPatch,
