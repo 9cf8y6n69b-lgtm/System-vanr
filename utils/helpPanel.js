@@ -114,7 +114,7 @@ function command(client, guild, name, canEdit) {
             { name: "الحالة", value: cfg.disabled ? "⛔ معطل" : "✅ شغال", inline: true },
             { name: "الاختصارات الأصلية", value: (cmd.aliases || []).map(a => `\`${a}\``).join(" ") || "—", inline: false },
             { name: "اختصارات أضفتها", value: cfg.aliases.map(a => `\`${a}\``).join(" ") || "—", inline: false },
-            { name: "مقيّد بالرتبة", value: cfg.roleId ? `<@&${cfg.roleId}>` : "لا", inline: true },
+            { name: "مقيّد بالرتبة", value: cfg.roleIds && cfg.roleIds.length ? cfg.roleIds.map(r => `<@&${r}>`).join(" ") : "لا", inline: true },
             { name: "مقيّد بالروم", value: cfg.channelId ? `<#${cfg.channelId}>` : "لا", inline: true }
         );
 
