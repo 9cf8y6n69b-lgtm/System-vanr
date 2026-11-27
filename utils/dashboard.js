@@ -241,6 +241,11 @@ async function api(client, req, res, url) {
                 emoji: TA.cleanEmoji(c.emoji), roleId: c.roleId && guild.roles.cache.has(c.roleId) ? c.roleId : null
             }));
             cur.panelMode = b.panelMode === "image" ? "image" : "embed";
+            cur.transferSections = (Array.isArray(b.transferSections) ? b.transferSections : []).slice(0, 25).map((x, i) => ({
+                id: String((x && x.id) || `s${Date.now().toString(36)}${i}`).replace(/[^\w]/g, "").slice(0, 30) || `s${i}`,
+                name: String((x && x.name) || "").trim().slice(0, 80),
+                roleIds: (Array.isArray(x && x.roleIds) ? x.roleIds : []).filter(r => guild.roles.cache.has(r)).slice(0, 10)
+            })).filter(x => x.name && x.roleIds.length);
             for (const k of ["panelText", "requestText", "ticketText", "acceptedText", "pointText"]) cur[k] = String(b[k] || "").slice(0, 2000);
             TA.save(guild.id, cur);
             return json(res, 200, { ok: true });
