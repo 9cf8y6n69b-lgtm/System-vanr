@@ -194,17 +194,20 @@ VIEWS.tickets = () => {
         <div class=row><label>كاتيغوري التكت</label><select id=t_cat>${G.categories.map(c => `<option value="${c.id}" ${c.id === t.ticketCategoryId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}<option value="" ${t.ticketCategoryId ? "" : "selected"}>— بدون —</option></select></div>
         <div class=row><label>رتب الدعم</label></div>${roleMulti("t_roles", t.reviewerRoleIds)}</div>
         <div class=card><b>الأقسام</b><div id=t_cats>${cats}</div><button class=s onclick=addTicketCat()>+ إضافة قسم</button></div>
+        <div class=card><b>أقسام التحويل</b><div class=muted>زر "تحويل" داخل التكت يعرض هذي الأقسام (تحت بعض). حط اسم القسم واختر الرتب اللي تستلم التكت (Ctrl/⌘ لأكثر من رتبة).</div><div id=t_ts>${(t.transferSections || []).map(x => tsRow(x)).join("")}</div><button class=s onclick=addTs()>+ إضافة قسم تحويل</button></div>
         <div class=card><b>شكل اللوحة</b><div class=row><label>النمط</label><select id=t_mode><option value=embed ${t.panelMode !== "image" ? "selected" : ""}>إمبد + صورة + أقسام</option><option value=image ${t.panelMode === "image" ? "selected" : ""}>صورة + أقسام فقط (بدون إمبد)</option></select></div></div>
         <div class=card><b>النصوص</b>${[["panelText", "نص اللوحة"], ["requestText", "نص الريكوست"], ["ticketText", "نص داخل التكت"], ["acceptedText", "DM القبول"], ["pointText", "DM النقطة"]].map(([k, l]) => `<div class=muted>${l}</div><textarea id=tx_${k}>${esc(t[k])}</textarea>`).join("")}<div class=muted>المتغيرات: {user} {number} {category} {staff} {ticket} {admin}</div></div>
         <div class=row><button onclick=saveTickets()>حفظ</button><button class=s onclick=sendPanel()>حفظ + إرسال اللوحة</button></div><div class=muted>صور اللوحة والريكوست من أمر <code>تكت</code> في ديسكورد.</div>`;
 };
+const tsRow = x => `<div class="card ts" data-id="${esc((x && x.id) || "")}"><div class=row><input class=ts_name placeholder="اسم القسم (مثال: الدعم الفني)" value="${esc((x && x.name) || "")}" style="flex:1"><button class=d onclick="this.closest('.ts').remove()">حذف</button></div><select class=ts_roles multiple size=5 style="width:100%">${G.roles.map(r => `<option value="${r.id}"${((x && x.roleIds) || []).includes(r.id) ? " selected" : ""}>${esc(r.name)}</option>`).join("")}</select></div>`;
+function addTs() { $("#t_ts").insertAdjacentHTML("beforeend", tsRow(null)); }
 function addTicketCat() {
     const d = document.createElement("div"); d.className = "row"; d.dataset.c = "new";
     d.innerHTML = `<input class=c_name placeholder="الاسم"><input class=c_desc placeholder="الوصف" style="flex:1"><input class=c_emoji placeholder="إيموجي" style="width:80px"><select class=c_role>${roleOpts("", "كل الرتب")}</select><button class=d onclick="this.parentElement.remove()">حذف</button><input type=hidden class=c_id value="">`;
     $("#t_cats").appendChild(d);
 }
 function ticketBody() {
-    const b = { panelChannelId: val("t_panel") || null, requestChannelId: val("t_req") || null, ticketCategoryId: val("t_cat") || null, panelMode: val("t_mode"), reviewerRoleIds: picked("t_roles"), categories: [...document.querySelectorAll("#t_cats .row")].map(r => ({ id: r.querySelector(".c_id").value, name: r.querySelector(".c_name").value, description: r.querySelector(".c_desc").value, emoji: r.querySelector(".c_emoji").value, roleId: r.querySelector(".c_role").value || null })) };
+    const b = { panelChannelId: val("t_panel") || null, requestChannelId: val("t_req") || null, ticketCategoryId: val("t_cat") || null, panelMode: val("t_mode"), transferSections: [...document.querySelectorAll("#t_ts .ts")].map(r => ({ id: r.dataset.id, name: r.querySelector(".ts_name").value, roleIds: [...r.querySelector(".ts_roles").selectedOptions].map(o => o.value) })), reviewerRoleIds: picked("t_roles"), categories: [...document.querySelectorAll("#t_cats .row")].map(r => ({ id: r.querySelector(".c_id").value, name: r.querySelector(".c_name").value, description: r.querySelector(".c_desc").value, emoji: r.querySelector(".c_emoji").value, roleId: r.querySelector(".c_role").value || null })) };
     ["panelText", "requestText", "ticketText", "acceptedText", "pointText"].forEach(k => (b[k] = val("tx_" + k)));
     return b;
 }
