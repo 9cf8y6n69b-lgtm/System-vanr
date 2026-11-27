@@ -1,171 +1,245 @@
 // ═══════════════════════════════════════════════
-//  Vanr • أزرار لوحة تحكم التكت (tkc:*)
+//  Vanr • لوحة تحكم التكت (كلها إمبد + أزرار)
 // ═══════════════════════════════════════════════
-const client = require("../index");
-const { MessageEmbed } = require("discord.js");
-const TA = require("../utils/ticketAdmin");
-const V = require("../utils/vanr");
+const fs = require("fs");
+const path = require("path");
+const https = require("https");
+const Pro = require("pro.db");
+const { MessageActionRow, MessageButton, MessageSelectMenu, MessageEmbed } = require("discord.js");
+const V = require("./vanr");
+const TS = require("./ticketSystem");
 
-const E = (text, color = "#f5b942") => new MessageEmbed().setColor(color).setDescription(String(text));
+const IMAGES_DIR = path.join(process.cwd(), "ticket_images");
+const imgKey = g => `ticket_imgs_${g}`;
+const MAX_IMAGE = 3 * 1024 * 1024;
 
-const isAdmin = member => member && member.permissions.has("ADMINISTRATOR");
-const skip = v => ["تخطي", "حذف", "مسح", "off"].includes(String(v).trim().toLowerCase());
-
-async function prompt(interaction, text) {
-    await interaction.followUp({ embeds: [E(`${text}\n*اكتب \`تخطي\` للمسح أو الرجوع للافتراضي.*`)], ephemeral: true }).catch(() => {});
-
-    const got = await interaction.channel
-        .awaitMessages({ filter: m => m.author.id === interaction.user.id, max: 1, time: 60000 })
-        .then(c => c.first()).catch(() => null);
-
-    if (got) got.delete().catch(() => {});
-    return got;
-}
-
-const note = (interaction, text, color) => interaction.followUp({ embeds: [E(text, color)], ephemeral: true }).catch(() => {});
-
-function findCategoryChannel(guild, input) {
-    const t = input.trim();
-    if (/^\d{15,25}$/.test(t)) { const c = guild.channels.cache.get(t); if (c && c.type === "GUILD_CATEGORY") return c; }
-    return guild.channels.cache.find(c => c.type === "GUILD_CATEGORY" && c.name.toLowerCase() === t.toLowerCase()) || null;
-}
-
-const channelFrom = (guild, got) => got.mentions.channels.first() || guild.channels.cache.get((got.content.match(/\d{15,}/) || [])[0]);
-
-// يحلل: الاسم | الوصف | إيموجي | @رتبة
-function parseSection(got) {
-    const parts = got.content.split("|").map(s => s.trim());
-    const out = { name: (parts[0] || "").slice(0, 80), description: "", emoji: null, roleId: null };
-
-    for (const part of parts.slice(1)) {
-        const role = (part.match(/<@&(\d+)>/) || [])[1];
-        if (role) { out.roleId = role; continue; }
-        const emoji = TA.cleanEmoji(part);
-        if (emoji) { out.emoji = emoji; continue; }
-        if (part) out.description = part.slice(0, 100);
-    }
-
-    const mentionRole = got.mentions.roles.first();
-    if (mentionRole) out.roleId = mentionRole.id;
-    return out;
-}
-
-client.once("ready", () => { try { TA.restoreImages(client); } catch (e) { console.error("[TICKET] restore images:", e.message); } });
-
-client.on("interactionCreate", async interaction => {
-    try {
-        const id = String(interaction.customId || "");
-        if (!interaction.guild || !id.startsWith("tkc:") || !(interaction.isButton() || interaction.isSelectMenu())) return;
-
-        if (!isAdmin(interaction.member)) return interaction.reply({ embeds: [E("لوحة التحكم للإداريين فقط.", "#e74c3c")], ephemeral: true });
-
-        const guild = interaction.guild;
-        const [, action, arg] = id.split(":");
-
-        // ───── تنقل ─────
-        if (action === "home") return interaction.update(TA.dashboard(guild));
-        if (action === "close") return interaction.update({ components: [] });
-        if (action === "sections") return interaction.update(TA.sectionsView(guild));
-        if (action === "secpick") return interaction.update(TA.sectionView(guild, interaction.values[0]));
-
-        // ───── بدون سؤال ─────
-        if (action === "preview") {
-            const cfg = TA.load(guild.id);
-            return interaction.reply({ ...TA.buildPanel(guild, cfg), ephemeral: true });
-        }
-
-        if (action === "send") {
-            const cfg = TA.load(guild.id);
-            const target = guild.channels.cache.get(cfg.panelChannelId);
-            if (!target) return interaction.reply({ embeds: [E("حدد روم اللوحة أول.", "#e74c3c")], ephemeral: true });
-            if (!cfg.categories.length) return interaction.reply({ embeds: [E("أضف قسم واحد على الأقل أول.", "#e74c3c")], ephemeral: true });
-            if (!cfg.requestChannelId) return interaction.reply({ embeds: [E("حدد روم الريكوست أول.", "#e74c3c")], ephemeral: true });
-
-            const ok = await target.send(TA.buildPanel(guild, cfg)).then(() => true).catch(() => false);
-            return interaction.reply({ embeds: [E(ok ? `${V.icon(guild, "verified")} انرسلت اللوحة في ${target}` : "ما قدرت أرسل في الروم (تأكد من صلاحيات البوت).", ok ? "#2ecc71" : "#e74c3c")], ephemeral: true });
-        }
-
-        if (action === "panelmode") {
-            const cfg = TA.load(guild.id);
-            cfg.panelMode = cfg.panelMode === "image" ? "embed" : "image";
-            TA.save(guild.id, cfg);
-            return interaction.update(TA.dashboard(guild));
-        }
-
-        if (action === "secdel") {
-            const cfg = TA.load(guild.id);
-            cfg.categories = cfg.categories.filter(c => c.id !== arg);
-            TA.save(guild.id, cfg);
-            return interaction.update(TA.sectionsView(guild, "تم حذف القسم"));
-        }
-
-        // ───── أسئلة ─────
-        await interaction.deferUpdate();
-        const cfg = TA.load(guild.id);
-        let back = TA.dashboard(guild);
-        const refresh = () => interaction.editReply(back).catch(() => {});
-
-        if (action === "panelch" || action === "reqch") {
-            const got = await prompt(interaction, action === "panelch" ? "منشن روم اللوحة:" : "منشن روم الريكوست (اللي تنزل فيه الطلبات):");
-            if (!got) return;
-            const c = channelFrom(guild, got);
-            if (!c || !c.isText()) { await note(interaction, "ما لقيت الروم.", "#e74c3c"); return; }
-            cfg[action === "panelch" ? "panelChannelId" : "requestChannelId"] = c.id;
-        } else if (action === "cat") {
-            const got = await prompt(interaction, "اكتب اسم الكاتيغوري أو الـ ID (اللي تنفتح فيه التكتات):");
-            if (!got) return;
-            if (skip(got.content)) cfg.ticketCategoryId = null;
-            else {
-                const c = findCategoryChannel(guild, got.content);
-                if (!c) { await note(interaction, "ما لقيت الكاتيغوري.", "#e74c3c"); return; }
-                cfg.ticketCategoryId = c.id;
-            }
-        } else if (action === "roles") {
-            const got = await prompt(interaction, "منشن رتب الدعم (تقدر أكثر من وحدة):");
-            if (!got) return;
-            cfg.reviewerRoleIds = skip(got.content) ? [] : [...got.mentions.roles.keys()];
-        } else if (action === "panelimg" || action === "reqimg") {
-            const got = await prompt(interaction, "أرسل الصورة (مرفق، أو رابط):");
-            if (!got) return;
-            const field = action === "panelimg" ? "panelImagePath" : "requestImagePath";
-
-            if (skip(got.content)) cfg[field] = null;
-            else {
-                const url = (got.attachments.first() || {}).url || (got.content.match(/https?:\/\/\S+/) || [])[0];
-                if (!url) { await note(interaction, "ما لقيت صورة.", "#e74c3c"); return; }
-                try { cfg[field] = await TA.downloadImage(url, `${guild.id}_${field}_${Date.now()}`, guild.id); }
-                catch (e) { await note(interaction, `فشل تحميل الصورة: ${e.message}`, "#e74c3c"); return; }
-            }
-        } else if (["paneltxt", "reqtxt", "tickettxt", "acctxt", "pointtxt"].includes(action)) {
-            const map = { paneltxt: ["panelText", "نص اللوحة"], reqtxt: ["requestText", "نص رسالة الريكوست"], tickettxt: ["ticketText", "نص الرسالة داخل التكت"], acctxt: ["acceptedText", "رسالة DM للعضو بعد القبول"], pointtxt: ["pointText", "رسالة DM للإداري عند حصوله على نقطة"] };
-            const [field, label] = map[action];
-            const got = await prompt(interaction, `اكتب ${label}:`);
-            if (!got) return;
-            cfg[field] = skip(got.content) ? "" : got.content;
-        } else if (action === "secadd" || action === "secedit") {
-            const got = await prompt(interaction, "اكتب القسم بالصيغة: `الاسم | الوصف | الإيموجي | @الرتبة`");
-            if (!got) return;
-            const sec = parseSection(got);
-            if (!sec.name) { await note(interaction, "لازم اسم للقسم.", "#e74c3c"); return; }
-
-            if (action === "secadd") {
-                if (cfg.categories.length >= 25) { await note(interaction, "الحد 25 قسم.", "#e74c3c"); return; }
-                cfg.categories.push({ id: `cat_${Date.now().toString(36)}`, ...sec });
-                back = TA.sectionsView(guild, "تمت إضافة القسم");
-            } else {
-                const target = cfg.categories.find(c => c.id === arg);
-                if (target) Object.assign(target, sec);
-                TA.save(guild.id, cfg);
-                return interaction.editReply(TA.sectionView(guild, arg)).catch(() => {});
-            }
-        }
-
-        TA.save(guild.id, cfg);
-        return refresh();
-    } catch (error) {
-        console.error("[TICKET ADMIN]", error);
-        const msg = { embeds: [E(`خطأ: ${String(error.message).slice(0, 150)}`, "#e74c3c")], ephemeral: true };
-        try { (interaction.replied || interaction.deferred ? interaction.followUp(msg) : interaction.reply(msg)).catch(() => {}); } catch {}
-    }
+const DEFAULTS = guildId => ({
+    guildId, panelChannelId: null, requestChannelId: null, ticketCategoryId: null,
+    reviewerRoleIds: [], categories: [], panelImagePath: null, requestImagePath: null,
+    panelMode: "embed", transferSections: [], panelText: "", requestText: "", ticketText: "", acceptedText: "", pointText: ""
 });
 
+const load = guildId => ({ ...DEFAULTS(guildId), ...(TS.getConfig(guildId) || {}) });
+const save = (guildId, cfg) => TS.setConfig(guildId, cfg);
+
+// ───────────── الصور (تنحفظ كملف + نسخة بالقاعدة عشان ما تضيع بالتحديث) ─────────────
+function downloadImage(url, fileName, guildId) {
+    return new Promise((resolve, reject) => {
+        fs.mkdirSync(IMAGES_DIR, { recursive: true });
+        const ext = (path.extname(new URL(url).pathname) || ".png").toLowerCase();
+        const filePath = path.join(IMAGES_DIR, `${fileName}${ext}`);
+
+        https.get(url, res => {
+            if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+            const chunks = [];
+            let size = 0;
+            res.on("data", c => { size += c.length; if (size > MAX_IMAGE) { res.destroy(); reject(new Error("الصورة أكبر من 3MB")); } else chunks.push(c); });
+            res.on("end", () => {
+                const buf = Buffer.concat(chunks);
+                fs.writeFileSync(filePath, buf);
+                const store = Pro.get(imgKey(guildId)) || {};
+                store[path.basename(filePath)] = buf.toString("base64");
+                Pro.set(imgKey(guildId), store);
+                resolve(filePath);
+            });
+        }).on("error", reject);
+    });
+}
+
+// يرجع الصور المفقودة (بعد إعادة تشغيل/نشر) من القاعدة
+function restoreImages(client) {
+    for (const guild of client.guilds.cache.values()) {
+        const cfg = TS.getConfig(guild.id);
+        const store = Pro.get(imgKey(guild.id));
+        if (!cfg || !store) continue;
+
+        for (const file of [cfg.panelImagePath, cfg.requestImagePath]) {
+            if (!file || fs.existsSync(file)) continue;
+            const data = store[path.basename(file)];
+            if (!data) continue;
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, Buffer.from(data, "base64"));
+        }
+    }
+}
+
+function cleanEmoji(value) {
+    const text = String(value || "").trim();
+    if (/^<a?:\w+:\d+>$/.test(text)) return text;
+    if (/^(\p{Extended_Pictographic}[️‍]*)+$/u.test(text)) return text;
+    return null;
+}
+
+// ───────────── لوحة الأعضاء (القائمة) ─────────────
+function makePanelRows(guild, categories) {
+    const options = categories.map(category => {
+        const option = {
+            label: category.name.slice(0, 100),
+            description: (category.description || category.name).slice(0, 100),
+            value: category.id
+        };
+        const emoji = category.emoji || V.btnEmoji(guild, "tkgold") || V.btnEmoji(guild, "ticket");
+        if (emoji) option.emoji = emoji;
+        return option;
+    });
+
+    const historyOption = { label: "تكتاتي السابقة", description: "عرض التكتات التي فتحتها سابقاً", value: "ticket_history" };
+    const historyEmoji = V.btnEmoji(guild, "history");
+    if (historyEmoji) historyOption.emoji = historyEmoji;
+    options.push(historyOption);
+
+    const rows = [];
+    for (let i = 0; i < options.length; i += 25) {
+        rows.push(new MessageActionRow().addComponents(
+            new MessageSelectMenu().setCustomId("tk:open").setPlaceholder("اختر القسم أو التكتات السابقة").addOptions(options.slice(i, i + 25))
+        ));
+    }
+    return rows;
+}
+
+function buildPanel(guild, config) {
+    const image = V.pickImage(config.panelImagePath, "ticket_panel");
+
+    // نمط "صورة + أقسام" بدون إمبد
+    if (config.panelMode === "image") {
+        const p = { components: makePanelRows(guild, config.categories || []) };
+        if (config.panelText) p.content = config.panelText;
+        if (image.file) p.files = [image.file];
+        return p;
+    }
+
+    const embed = new MessageEmbed()
+        .setColor(V.COLOR)
+        .setAuthor({ name: `${guild.name} • مركز الدعم`, iconURL: guild.iconURL({ dynamic: true }) || undefined })
+        .setDescription(
+            config.panelText ||
+            `${V.icon(guild, "tkcrown")} **اختر القسم المناسب من القائمة بالأسفل**\n` +
+            `${V.icon(guild, "sparkle")} سيصل طلبك للإدارة وبعد القبول تُفتح لك تذكرة خاصة.`
+        )
+        .setFooter({ text: `${V.BRAND} • Ticket System`, iconURL: guild.iconURL({ dynamic: true }) || undefined });
+
+    if (image.url) embed.setImage(image.url);
+
+    const payload = { embeds: [embed], components: makePanelRows(guild, config.categories || []) };
+    if (image.file) payload.files = [image.file];
+    return payload;
+}
+
+// ───────────── واجهة التحكم ─────────────
+const btn = (guild, id, label, style = "SECONDARY", emoji) => {
+    const b = new MessageButton().setCustomId(id).setLabel(label).setStyle(style);
+    const e = emoji && V.btnEmoji(guild, emoji);
+    if (e) b.setEmoji(e);
+    return b;
+};
+
+const mark = (ok, text) => `${ok ? "✅" : "❌"} ${text}`;
+const ch = id => (id ? `<#${id}>` : "غير محدد");
+const txt = t => (t ? "مخصص" : "افتراضي");
+
+function dashboard(guild) {
+    const c = load(guild.id);
+    const i = key => V.icon(guild, key);
+
+    const embed = new MessageEmbed()
+        .setColor("#f5b942")
+        .setAuthor({ name: `${guild.name} • لوحة تحكم التكت`, iconURL: guild.iconURL({ dynamic: true }) || undefined })
+        .setDescription(
+            `${i("tkcrown")} **كل إعدادات التكت من هنا**، اضغط الزر وجاوب في الشات (60 ثانية).\n` +
+            "المتغيرات في النصوص: `{user}` `{number}` `{category}` `{staff}` `{ticket}` `{admin}`"
+        )
+        .addFields(
+            { name: `${i("panel")} الرومات`, value: [mark(c.panelChannelId, `اللوحة: ${ch(c.panelChannelId)}`), mark(c.requestChannelId, `الريكوست: ${ch(c.requestChannelId)}`), mark(c.ticketCategoryId, `كاتيغوري التكت: ${ch(c.ticketCategoryId)}`)].join("\n"), inline: false },
+            { name: `${i("support")} رتب الدعم`, value: mark(c.reviewerRoleIds.length, c.reviewerRoleIds.map(r => `<@&${r}>`).join(" ") || "غير محددة"), inline: false },
+            { name: `${i("tkgold")} الأقسام (${c.categories.length})`, value: (c.categories.map(x => `${x.emoji || "•"} **${x.name}**`).join(" • ") || "ما فيه أقسام").slice(0, 1000), inline: false },
+            { name: `${i("image")} الصور`, value: `اللوحة: ${c.panelImagePath ? "مخصصة" : "Vanr"} • الريكوست: ${c.requestImagePath ? "مخصصة" : "Vanr"}`, inline: true },
+            { name: `${i("note")} النصوص`, value: `اللوحة: ${txt(c.panelText)} • الريكوست: ${txt(c.requestText)} • التكت: ${txt(c.ticketText)}\nDM القبول: ${txt(c.acceptedText)} • DM النقطة: ${txt(c.pointText)}`, inline: true }
+        )
+        .setFooter({ text: `${V.BRAND} • Ticket System` });
+
+    const rows = [
+        new MessageActionRow().addComponents(
+            btn(guild, "tkc:panelch", "روم اللوحة", "SECONDARY", "panel"),
+            btn(guild, "tkc:reqch", "روم الريكوست", "SECONDARY", "panel"),
+            btn(guild, "tkc:cat", "كاتيغوري التكت", "SECONDARY", "folder"),
+            btn(guild, "tkc:roles", "رتب الدعم", "SECONDARY", "support"),
+            btn(guild, "tkc:sections", "الأقسام", "PRIMARY", "tkgold")
+        ),
+        new MessageActionRow().addComponents(
+            btn(guild, "tkc:panelimg", "صورة اللوحة", "SECONDARY", "image"),
+            btn(guild, "tkc:reqimg", "صورة الريكوست", "SECONDARY", "image"),
+            btn(guild, "tkc:paneltxt", "نص اللوحة", "SECONDARY", "note"),
+            btn(guild, "tkc:reqtxt", "نص الريكوست", "SECONDARY", "note"),
+            btn(guild, "tkc:tickettxt", "نص التكت", "SECONDARY", "note")
+        ),
+        new MessageActionRow().addComponents(
+            btn(guild, "tkc:acctxt", "DM القبول", "SECONDARY", "accept"),
+            btn(guild, "tkc:pointtxt", "DM النقطة", "SECONDARY", "star"),
+            btn(guild, "tkc:preview", "معاينة اللوحة", "SECONDARY", "eye"),
+            btn(guild, "tkc:send", "إرسال اللوحة", "SUCCESS", "sparkle"),
+            btn(guild, "tkc:close", "إغلاق", "DANGER", "close")
+        ),
+        new MessageActionRow().addComponents(
+            btn(guild, "tkc:panelmode", c.panelMode === "image" ? "نمط اللوحة: صورة + أقسام" : "نمط اللوحة: إمبد", "PRIMARY", "image")
+        )
+    ];
+
+    return { embeds: [embed], components: rows, content: null };
+}
+
+function sectionsView(guild, notice) {
+    const c = load(guild.id);
+    const i = key => V.icon(guild, key);
+
+    const embed = new MessageEmbed()
+        .setColor("#f5b942")
+        .setAuthor({ name: `${guild.name} • أقسام التكت`, iconURL: guild.iconURL({ dynamic: true }) || undefined })
+        .setDescription(
+            (c.categories.map((x, n) => `**${n + 1}.** ${x.emoji || i("tkgold")} **${x.name}**${x.description ? ` — ${x.description}` : ""}${x.roleId ? ` • <@&${x.roleId}>` : ""}`).join("\n") || "ما فيه أقسام، اضغط **إضافة**.") +
+            "\n\n**صيغة الإضافة:** `الاسم | الوصف | الإيموجي | @الرتبة` (كلها اختيارية ما عدا الاسم)"
+        )
+        .setFooter({ text: notice || `${V.BRAND} • Ticket System` });
+
+    const rows = [];
+
+    if (c.categories.length) {
+        rows.push(new MessageActionRow().addComponents(
+            new MessageSelectMenu().setCustomId("tkc:secpick").setPlaceholder("اختر قسم لتعديله أو حذفه")
+                .addOptions(c.categories.slice(0, 25).map(x => ({ label: x.name.slice(0, 100), value: x.id, description: (x.description || "—").slice(0, 100) })))
+        ));
+    }
+
+    rows.push(new MessageActionRow().addComponents(
+        btn(guild, "tkc:secadd", "إضافة قسم", "SUCCESS", "adduser"),
+        btn(guild, "tkc:home", "رجوع", "SECONDARY", "panel")
+    ));
+
+    return { embeds: [embed], components: rows, content: null };
+}
+
+function sectionView(guild, id) {
+    const c = load(guild.id);
+    const x = c.categories.find(s => s.id === id);
+    if (!x) return sectionsView(guild, "القسم غير موجود");
+
+    const embed = new MessageEmbed()
+        .setColor("#f5b942")
+        .setTitle(`${x.emoji || V.icon(guild, "tkgold")} ${x.name}`)
+        .addFields(
+            { name: "الوصف", value: x.description || "—", inline: false },
+            { name: "الرتبة", value: x.roleId ? `<@&${x.roleId}>` : "الرتب العامة فقط", inline: true },
+            { name: "الإيموجي", value: x.emoji || "افتراضي", inline: true }
+        );
+
+    return {
+        embeds: [embed],
+        components: [new MessageActionRow().addComponents(
+            btn(guild, `tkc:secedit:${id}`, "تعديل", "PRIMARY", "edit"),
+            btn(guild, `tkc:secdel:${id}`, "حذف", "DANGER", "trash"),
+            btn(guild, "tkc:sections", "رجوع", "SECONDARY", "panel")
+        )],
+        content: null
+    };
+}
+
+module.exports = { load, save, dashboard, sectionsView, sectionView, buildPanel, makePanelRows, downloadImage, restoreImages, cleanEmoji, IMAGES_DIR };
