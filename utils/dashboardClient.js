@@ -276,14 +276,15 @@ async function rawOpen(k) {
 }
 
 // ───────── الأوامر ─────────
-VIEWS.commands = () => { $("#main").innerHTML = `<input id=q placeholder="ابحث عن أمر..." oninput=cmdList() style="width:100%"><div id=cl></div>`; cmdList(); };
+VIEWS.commands = () => { $("#main").innerHTML = `<div class=card><b>رتب تستخدم كل الأوامر</b><div class=muted>أي عضو معه إحدى هذي الرتب يقدر يستخدم أي أمر (عدا أوامر المالك) حتى لو ما عنده صلاحية. اضغط Ctrl/⌘ لاختيار أكثر من رتبة.</div>${roleMulti("cg_roles", G.cmdGlobal)}<div class=row><button onclick=saveCmdGlobal()>حفظ</button></div></div><input id=q placeholder="ابحث عن أمر..." oninput=cmdList() style="width:100%"><div id=cl></div>`; cmdList(); };
 function cmdList() {
     const q = (val("q") || "").toLowerCase();
     const list = G.commands.filter(c => !q || c.name.includes(q) || c.desc.toLowerCase().includes(q));
     $("#cl").innerHTML = list.slice(0, 60).map(c => `<div class=card><div class=row><b>${esc(c.name)}</b><span class=chip>${esc(c.dir)}</span><span class=muted>${esc(c.desc)}</span></div>
-        <div class=row>${box("d_" + c.name, c.cfg.disabled, "معطل")}<input id="a_${c.name}" placeholder="اختصارات بمسافة" value="${esc(c.cfg.aliases.join(" "))}"><select id="r_${c.name}">${roleOpts(c.cfg.roleId)}</select><select id="c_${c.name}">${chanOpts(c.cfg.channelId, "كل الرومات")}</select><button onclick="saveCmd('${c.name}')">حفظ</button></div></div>`).join("") + (list.length > 60 ? `<div class=muted>يعرض أول 60 من ${list.length}، استخدم البحث.</div>` : "");
+        <div class=row>${box("d_" + c.name, c.cfg.disabled, "معطل")}<input id="a_${c.name}" placeholder="اختصارات بمسافة" value="${esc(c.cfg.aliases.join(" "))}"><span class=muted>الرتب المسموحة:</span>${roleMulti("r_" + c.name, c.cfg.roleIds)}<select id="c_${c.name}">${chanOpts(c.cfg.channelId, "كل الرومات")}</select><button onclick="saveCmd('${c.name}')">حفظ</button></div></div>`).join("") + (list.length > 60 ? `<div class=muted>يعرض أول 60 من ${list.length}، استخدم البحث.</div>` : "");
 }
-async function saveCmd(n) { await post("command", { name: n, disabled: chk("d_" + n), aliases: val("a_" + n).split(/\s+/).filter(Boolean), roleId: val("r_" + n) || null, channelId: val("c_" + n) || null }); await reload(); toast(); }
+async function saveCmdGlobal() { await post("cmdglobal", { roleIds: picked("cg_roles") }); await reload(); toast(); }
+async function saveCmd(n) { await post("command", { name: n, disabled: chk("d_" + n), aliases: val("a_" + n).split(/\s+/).filter(Boolean), roleIds: picked("r_" + n), channelId: val("c_" + n) || null }); await reload(); toast(); }
 
 // ───────── الاختصارات ─────────
 VIEWS.shortcuts = () => {
@@ -310,12 +311,12 @@ VIEWS.backup = async () => {
         <div class=muted>الروم: <code>${esc(st.channel)}</code> • آخر نسخة: ${st.lastSent ? new Date(st.lastSent).toLocaleString("ar") : "—"} ${st.dirty ? "• فيه تعديلات بالانتظار" : ""}</div>
         ${st.lastError ? `<div style="color:#e74c3c">آخر خطأ: ${esc(st.lastError)}</div>` : ""}
         ${r.items && r.items.error ? `<div style="color:#e74c3c">${esc(r.items.error)}</div>` : ""}
-        <div class=row><button onclick=bkNow()>📦 نسخة الحين</button><label class=muted>استرجاع من ملف:</label><input type=file id=bkf accept=".gz,.json" onchange=bkUpload(this)></div>
+        <div class=row><button onclick=bkNow()>📦 نسخة الحين</button><button onclick=bkRestore("")>♻️ استرجاع شامل (كل النسخ)</button><label class=muted>استرجاع من ملف:</label><input type=file id=bkf accept=".gz,.json" onchange=bkUpload(this)></div>
         <div class=muted>الاسترجاع دمج: القديم يرجع، والجديد اللي مو بالنسخة ما ينحذف.</div></div>
-        <div class=card><b>آخر النسخ في الروم</b>${items.map(i => `<div class=row><span>${new Date(i.at).toLocaleString("ar")} • ${(i.size / 1024).toFixed(1)}KB</span><span class=sp></span><button onclick="bkRestore('${i.id}')">استرجاع</button></div>`).join("") || "<div class=muted>ما فيه نسخ</div>"}</div>`;
+        <div class=card><b>آخر النسخ في الروم</b>${items.map(i => `<div class=row><span>${new Date(i.at).toLocaleString("ar")} • ${i.count || "?"} إعداد • ${(i.size / 1024).toFixed(1)}KB</span><span class=sp></span><button onclick="bkRestore('${i.id}')">استرجاع</button></div>`).join("") || "<div class=muted>ما فيه نسخ</div>"}</div>`;
 };
 async function bkNow() { try { const r = await api("/api/backup/now", {}); toast("انرسلت النسخة (" + r.count + ")"); VIEWS.backup(); } catch { toast("فشلت النسخة", true); } }
-async function bkRestore(id) { if (!confirm("تسترجع هذي النسخة؟ (دمج، ما ينحذف الجديد)")) return; try { const r = await api("/api/backup/restore", { id }); await reload(); toast("رجعت " + r.applied + " إعداد"); } catch { toast("فشل الاسترجاع", true); } }
+async function bkRestore(id) { if (!confirm(id ? "تسترجع هذي النسخة؟ (دمج، ما ينحذف الجديد)" : "استرجاع شامل: يدمج كل النسخ ويرجع كل شيء. تكمل؟")) return; try { const r = await api("/api/backup/restore", id ? { id } : { all: true }); await reload(); toast("رجعت " + r.applied + " إعداد"); } catch { toast("فشل الاسترجاع", true); } }
 function bkUpload(inp) {
     const f = inp.files[0]; if (!f) return;
     const rd = new FileReader();
