@@ -285,8 +285,12 @@ client.on("interactionCreate", async (interaction) => {
         }
         interaction.member = interaction.guild.members.cache.get(interaction.user.id);
 
-        const blocked = require("../utils/cmdConfig").blockReason(interaction.guild, interaction.member, interaction.channel, cmd.name);
+        const CCfg = require("../utils/cmdConfig");
+        const realCmd = client.commands.get(cmd.name) || cmd;
+        const blocked = CCfg.blockReason(interaction.guild, interaction.member, interaction.channel, cmd.name, realCmd);
         if (blocked) return interaction.reply({ content: `⛔ ${blocked}`, ephemeral: true }).catch(() => {});
+
+        if (interaction.member && !interaction.member.permissions.has("ADMINISTRATOR") && CCfg.granted(interaction.guild, interaction.member, realCmd)) CCfg.grantPerms(interaction, interaction.member);
 
         Promise.resolve()
             .then(() => cmd.run(client, interaction, args))
