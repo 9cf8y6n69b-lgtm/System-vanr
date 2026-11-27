@@ -310,16 +310,18 @@ function ticketRows(guild, ticket) {
         new MessageActionRow().addComponents(
             button(guild, { id: "tk:close", label: "اغلاق", style: "DANGER", emojiKey: "close" }),
             button(guild, { id: "tk:rename", label: "اسم", style: "SECONDARY", emojiKey: "rename" }),
-            button(guild, { id: "tk:transfer", label: "تحويل", style: "SECONDARY", emojiKey: "transfer" }),
-            button(guild, { id: "tk:call", label: "استدعاء", style: "SECONDARY", emojiKey: "call" }),
-            button(guild, { id: "tk:transcript", label: "نسخه", style: "SECONDARY", emojiKey: "transcript" })
+            button(guild, { id: "tk:transfer", label: "تحويل", style: "SECONDARY", emojiKey: "transfer" })
+        ),
+        new MessageActionRow().addComponents(
+            button(guild, { id: "tk:transcript", label: "نسخه", style: "SECONDARY", emojiKey: "transcript" }),
+            button(guild, { id: "tk:call", label: "استدعاء", style: "SECONDARY", emojiKey: "call" })
         )
     ];
 }
 
 // رسالة التكت الرئيسية: صورة شفافة + أزرار بدون إمبد
 function welcomePayload(guild, ticket, config, content, mentions) {
-    const image = V.pickImage(config.requestImagePath, "ticket_welcome");
+    const image = V.pickImage(null, "ticket_welcome");
     const p = { content, components: ticketRows(guild, ticket), allowedMentions: mentions };
     if (image.file) p.files = [image.file];
     return p;
@@ -670,6 +672,8 @@ async function decideRequest(interaction, config, action, number) {
             createdAt: req.createdAt,
             requestMessageId: req.requestMessageId
         };
+
+        await V.ensureEmojis(guild, ["close", "rename", "transfer", "call", "transcript"]);
 
         const payload = welcomePayload(guild, ticket, config, `<@${req.userId}> <@${interaction.user.id}>`, { users: [req.userId, interaction.user.id] });
 
