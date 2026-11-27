@@ -144,6 +144,11 @@ function isHandler(member, config, ticket) {
 
 // ───────────── جهات التحويل ─────────────
 function getTransferTargets(config, guildId) {
+    // أقسام التحويل من الداشبورد (لو موجودة تكون هي الوحيدة)
+    const sections = (config.transferSections || []).filter(x => x && x.name && (x.roleIds || []).length)
+        .map(x => ({ id: `ts_${x.id}`, name: x.name, description: "تحويل التكت لهذا القسم", roleIds: x.roleIds, type: "section" }));
+    if (sections.length) return sections;
+
     const saved = Pro.get(TRANSFERS_KEY(guildId)) || [];
 
     const fromCategories = (config.categories || [])
@@ -303,24 +308,21 @@ function ticketEmbed(guild, ticket, config, user) {
 function ticketRows(guild, ticket) {
     return [
         new MessageActionRow().addComponents(
-            button(guild, {
-                id: "tk:claim",
-                label: ticket.claimedBy ? "مستلم" : "استلام",
-                style: "PRIMARY",
-                emojiKey: "claim"
-            }).setDisabled(Boolean(ticket.claimedBy)),
+            button(guild, { id: "tk:close", label: "اغلاق", style: "DANGER", emojiKey: "close" }),
+            button(guild, { id: "tk:rename", label: "اسم", style: "SECONDARY", emojiKey: "rename" }),
             button(guild, { id: "tk:transfer", label: "تحويل", style: "SECONDARY", emojiKey: "transfer" }),
             button(guild, { id: "tk:call", label: "استدعاء", style: "SECONDARY", emojiKey: "call" }),
-            button(guild, { id: "tk:close", label: "إغلاق", style: "DANGER", emojiKey: "close" })
-        ),
-        new MessageActionRow().addComponents(
-            button(guild, { id: "tk:adduser", label: "إضافة عضو", style: "SUCCESS", emojiKey: "adduser" }),
-            button(guild, { id: "tk:rmuser", label: "إزالة عضو", style: "SECONDARY", emojiKey: "rmuser" }),
-            button(guild, { id: "tk:lock", label: ticket.locked ? "فتح القفل" : "قفل", style: "SECONDARY", emojiKey: ticket.locked ? "unlock" : "lock" }),
-            button(guild, { id: "tk:rename", label: "تسمية", style: "SECONDARY", emojiKey: "rename" }),
-            button(guild, { id: "tk:transcript", label: "نسخة", style: "SECONDARY", emojiKey: "transcript" })
+            button(guild, { id: "tk:transcript", label: "نسخه", style: "SECONDARY", emojiKey: "transcript" })
         )
     ];
+}
+
+// رسالة التكت الرئيسية: صورة شفافة + أزرار بدون إمبد
+function welcomePayload(guild, ticket, config, content, mentions) {
+    const image = V.pickImage(config.requestImagePath, "ticket_welcome");
+    const p = { content, components: ticketRows(guild, ticket), allowedMentions: mentions };
+    if (image.file) p.files = [image.file];
+    return p;
 }
 
 // يحدّث الرسالة الرئيسية للتكت بعد استلام/تحويل
@@ -333,11 +335,8 @@ async function refreshTicketMessage(guild, channel, ticket, config) {
 
     if (!message) return;
 
-    const user = await client.users.fetch(ticket.userId).catch(() => null);
-    const { embed } = ticketEmbed(guild, ticket, config, user);
-
     await message
-        .edit({ embeds: [embed], components: ticketRows(guild, ticket) })
+        .edit({ components: ticketRows(guild, ticket) })
         .catch(err => console.error("[TICKET] refresh error:", err.message));
 }
 
@@ -408,6 +407,7 @@ async function openRequest(interaction, config) {
                 });
             }
 
+            if (pending && pending.channelId) { const oc = guild.channels.cache.get(pending.channelId); if (oc) oc.delete("pending expired").catch(() => {}); }
             TS.deletePending(guild.id, pendingNumber);
             Pro.delete(memberKey);
         } else {
@@ -431,7 +431,29 @@ async function openRequest(interaction, config) {
 
     const number = nextNumber(guild.id);
 
+    // التكت ينفتح الحين لكن مخفي عن الكل، وما يظهر إلا بعد قبول الإدارة
+    const parentId = config.ticketCategoryId || TICKETS_CATEGORY_ID;
+    const hiddenOptions = {
+        type: "GUILD_TEXT",
+        topic: `تكت ${num(number)} • ${category.name} • ${interaction.user.tag}`,
+        permissionOverwrites: [
+            { id: guild.id, deny: ["VIEW_CHANNEL"] },
+            { id: client.user.id, allow: ["VIEW_CHANNEL", "SEND_MESSAGES", "READ_MESSAGE_HISTORY", "MANAGE_CHANNELS", "MANAGE_ROLES", "ATTACH_FILES", "EMBED_LINKS"] }
+        ]
+    };
+    if (parentId && guild.channels.cache.has(parentId)) hiddenOptions.parent = parentId;
+
+    const hiddenChannel = await guild.channels.create(makeName(interaction.user.username, number), hiddenOptions).catch(err => {
+        console.error("[TICKET] hidden channel error:", err.message);
+        return null;
+    });
+
+    if (!hiddenChannel) {
+        return interaction.editReply({ embeds: [E("فشل فتح التكت. تأكد أن البوت عنده Manage Channels.")] });
+    }
+
     const req = {
+        channelId: hiddenChannel.id,
         number,
         guildId: guild.id,
         userId: interaction.user.id,
@@ -462,6 +484,7 @@ async function openRequest(interaction, config) {
     });
 
     if (!requestMessage) {
+        hiddenChannel.delete("request failed").catch(() => {});
         return interaction.editReply({
             embeds: [E("لم أستطع إرسال الطلب لروم الريكوست. تأكد من صلاحيات البوت هناك.")]
         });
@@ -522,6 +545,7 @@ async function decideRequest(interaction, config, action, number) {
 
         // ───── رفض ─────
         if (action === "reject") {
+            if (req.channelId) { const hc = guild.channels.cache.get(req.channelId); if (hc) hc.delete(`تكت ${number} مرفوض`).catch(() => {}); }
             TS.deletePending(guild.id, number);
             Pro.delete(memberKey);
 
@@ -560,6 +584,7 @@ async function decideRequest(interaction, config, action, number) {
         const member = await guild.members.fetch(req.userId).catch(() => null);
 
         if (!member) {
+            if (req.channelId) { const hc = guild.channels.cache.get(req.channelId); if (hc) hc.delete("member left").catch(() => {}); }
             TS.deletePending(guild.id, number);
             Pro.delete(memberKey);
             TS.updateHistoryByNumber(guild.id, req.userId, number, { status: "rejected", closedAt: Date.now() });
@@ -570,12 +595,8 @@ async function decideRequest(interaction, config, action, number) {
 
         const category = (config.categories || []).find(item => item.id === req.categoryId);
 
-        const baseRoleIds = [
-            ...new Set([
-                ...(config.reviewerRoleIds || []),
-                ...(category && category.roleId ? [category.roleId] : [])
-            ])
-        ].filter(id => guild.roles.cache.has(id));
+        // بعد القبول: يظهر للعضو + اللي قبل (+ رتبة القسم لو محددة). باقي الرتب ما تشوفه.
+        const baseRoleIds = [...new Set(category && category.roleId ? [category.roleId] : [])].filter(id => guild.roles.cache.has(id));
 
         const overwrites = [
             { id: guild.id, deny: ["VIEW_CHANNEL"] },
@@ -609,12 +630,21 @@ async function decideRequest(interaction, config, action, number) {
         const parentId = config.ticketCategoryId || TICKETS_CATEGORY_ID;
         if (parentId && guild.channels.cache.has(parentId)) channelOptions.parent = parentId;
 
-        const channel = await guild.channels
-            .create(makeName(user ? user.username : "member", number), channelOptions)
-            .catch(err => {
-                console.error("[TICKET] channel create error:", err);
-                return null;
-            });
+        let channel = req.channelId ? guild.channels.cache.get(req.channelId) || await guild.channels.fetch(req.channelId).catch(() => null) : null;
+
+        if (channel) {
+            // إظهار التكت المخفي لمن يستحق فقط
+            const ok = await channel.permissionOverwrites.set(overwrites).then(() => true).catch(err => { console.error("[TICKET] reveal error:", err.message); return false; });
+            if (!ok) channel = null;
+        } else {
+            // طلبات قديمة (قبل التعديل) بدون روم مخفي
+            channel = await guild.channels
+                .create(makeName(user ? user.username : "member", number), channelOptions)
+                .catch(err => {
+                    console.error("[TICKET] channel create error:", err);
+                    return null;
+                });
+        }
 
         if (!channel) {
             return interaction.followUp({
@@ -641,41 +671,23 @@ async function decideRequest(interaction, config, action, number) {
             requestMessageId: req.requestMessageId
         };
 
-        const { embed: tEmbed, image: tImage } = ticketEmbed(guild, ticket, config, user);
-
-        const payload = {
-            content: `<@${req.userId}> <@${interaction.user.id}>`,
-            embeds: [tEmbed],
-            components: ticketRows(guild, ticket),
-            allowedMentions: { users: [req.userId, interaction.user.id] }
-        };
-
-        if (tImage.file) payload.files = [tImage.file];
+        const payload = welcomePayload(guild, ticket, config, `<@${req.userId}> <@${interaction.user.id}>`, { users: [req.userId, interaction.user.id] });
 
         let controlMessage = await channel.send(payload).catch(err => {
             console.error("[TICKET] control message error:", err.message);
             return null;
         });
 
-        // لو فشل بالصورة نعيد بدونها عشان ما يبقى التكت فاضي
-        if (!controlMessage) {
-            tEmbed.image = null;
-            controlMessage = await channel.send({ ...payload, files: [], embeds: [tEmbed] }).catch(err => {
-                console.error("[TICKET] control message retry error:", err.message);
-                return null;
-            });
-        }
-
-        // آخر محاولة: رسالة نصية بسيطة + الأزرار (بدون إمبد)
+        // لو فشلت الصورة: نص بسيط + الأزرار
         let lastError = null;
         if (!controlMessage) {
             controlMessage = await channel.send({
-                content: `${payload.content}\n**🎫 تكت #${number}** — أزرار التحكم بالأسفل`,
+                content: `${payload.content}\n**مرحبا بك في دعم ${V.BRAND}** — اكتب مشكلتك الان`,
                 components: ticketRows(guild, ticket),
                 allowedMentions: payload.allowedMentions
             }).catch(err => { lastError = err.message; console.error("[TICKET] control plain error:", err.message); return null; });
             if (!controlMessage) {
-                interaction.followUp({ content: `⚠️ انفتح التكت لكن فشل إرسال أزرار التحكم: \`${lastError}\`\nتأكد أن للبوت صلاحية Send Messages + Embed Links + Attach Files داخل التكت.`, ephemeral: true }).catch(() => {});
+                interaction.followUp({ content: `⚠️ انفتح التكت لكن فشل إرسال أزرار التحكم: \`${lastError}\`\nتأكد أن للبوت صلاحية Send Messages + Attach Files داخل التكت.`, ephemeral: true }).catch(() => {});
             }
         }
 
@@ -765,12 +777,8 @@ async function claimTicket(interaction, config) {
         .catch(() => {});
 
     const user = await client.users.fetch(ticket.userId).catch(() => null);
-    const { embed } = ticketEmbed(guild, ticket, config, user);
-
-    await interaction.update({
-        embeds: [embed],
-        components: ticketRows(guild, ticket)
-    }).catch(() => {});
+    
+    await interaction.update({ components: ticketRows(guild, ticket) }).catch(() => {});
 
     await interaction.channel.send({
         embeds: [
@@ -902,7 +910,7 @@ async function performTransfer(interaction, config, targetId) {
             infoEmbed(
                 guild,
                 `${ico(guild, "transfer")} تم تحويل التكت إلى **${target.name}** بواسطة ${interaction.user}\n` +
-                `اضغطوا زر **استلام** لاستلامه.`
+                `التكت صار ظاهر لفريق القسم.`
             )
         ],
         allowedMentions: { roles: target.roleIds || [], users: [] }
@@ -1266,9 +1274,8 @@ async function toggleLock(interaction, config) {
         .catch(() => {});
 
     const user = await client.users.fetch(ticket.userId).catch(() => null);
-    const { embed } = ticketEmbed(guild, ticket, config, user);
-
-    await interaction.update({ embeds: [embed], components: ticketRows(guild, ticket) }).catch(() => {});
+    
+    await interaction.update({ components: ticketRows(guild, ticket) }).catch(() => {});
 
     await interaction.channel.send({
         embeds: [
