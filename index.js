@@ -89,6 +89,11 @@ async function main() {
 
     client.once("ready", () => {
         try { require("./utils/backup").start(client); } catch (e) { console.error("[BACKUP]", e.message); }
+        // رفع إيموجيات Vanr تلقائياً لأي سيرفر ناقصها (بالخلفية)
+        (async () => {
+            const V = require("./utils/vanr");
+            for (const g of client.guilds.cache.values()) await V.ensureEmojis(g).catch(() => {});
+        })();
         console.log(`✦ Vanr online: ${client.user.tag} | ${client.commands.size} أمر | ${client.guilds.cache.size} سيرفر`);
         console.log("  لو الأوامر ما ترد: شغّل البوت بـ DEBUG_MESSAGES=1 node index.js وشوف هل تظهر الرسائل.");
     });
