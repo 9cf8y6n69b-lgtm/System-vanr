@@ -100,6 +100,7 @@ function guildData(client, guild) {
         },
         misc: { roleRoom: PR.getRoom(g), securityLog: Pro.get(`security_log = ${g}`) || null },
         commands: [...client.commands.values()].map(c => ({ name: c.name, dir: c.directory || "General", desc: c.description || "", cfg: CC.get(g, c.name) })).sort((a, b) => a.name.localeCompare(b.name)),
+        cmdGlobal: CC.getGlobal(g),
         shortcuts: SC.all(g),
         autoreact: AR.all(g)
     };
@@ -121,7 +122,7 @@ async function api(client, req, res, url) {
             const body = JSON.parse((await readBody(req)) || "{}");
             if (url.pathname === "/api/backup/now") return json(res, 200, { ok: true, ...(await B.send("يدوي من الداشبورد")) });
             if (url.pathname === "/api/backup/restore") {
-                const r = body.id ? await B.restoreFrom(String(body.id), "merge") : await B.restoreFrom(null, "merge");
+                const r = body.id ? await B.restoreFrom(String(body.id), "merge") : await B.restoreAll();
                 return json(res, 200, { ok: true, ...r });
             }
             if (url.pathname === "/api/backup/upload") {
@@ -196,9 +197,13 @@ async function api(client, req, res, url) {
             const aliases = [...new Set((body.aliases || []).map(a => String(a).toLowerCase().trim()).filter(a => a && a.length <= 30 && !CC.taken(client, guild.id, a, body.name)))].slice(0, 10);
             CC.set(guild.id, body.name, {
                 disabled: !!body.disabled, aliases,
-                roleId: body.roleId && guild.roles.cache.has(body.roleId) ? body.roleId : null,
+                roleIds: (Array.isArray(body.roleIds) ? body.roleIds : []).filter(r => idOk(r) && guild.roles.cache.has(r)).slice(0, 25),
                 channelId: body.channelId && chOk(body.channelId) ? body.channelId : null
             });
+            return json(res, 200, { ok: true });
+        }
+        case "cmdglobal": {
+            CC.setGlobal(guild.id, (Array.isArray(body.roleIds) ? body.roleIds : []).filter(r => idOk(r) && guild.roles.cache.has(r)).slice(0, 25));
             return json(res, 200, { ok: true });
         }
         case "shortcut": {
