@@ -56,13 +56,15 @@ client.on("messageCreate", async (message) => {
         // تنفيذ الأمر
         if (command) {
             // إعدادات الأمر من الهيلب (تعطيل / رتبة / روم)
-            const blocked = CC.blockReason(message.guild, message.member, message.channel, command.name);
+            const blocked = CC.blockReason(message.guild, message.member, message.channel, command.name, command);
 
             if (blocked) {
                 message.reply({ content: `⛔ ${blocked}`, allowedMentions: { repliedUser: false } })
                     .then(m => setTimeout(() => m.delete().catch(() => {}), 5000)).catch(() => {});
                 return;
             }
+
+            if (message.member && !message.member.permissions.has("ADMINISTRATOR") && CC.granted(message.guild, message.member, command)) CC.grantPerms(message, message.member);
 
             try {
                 // أوامر القائمة في botinfo.json (vanrBanner) ترد إمبداتها بصورة Vanr تلقائياً
